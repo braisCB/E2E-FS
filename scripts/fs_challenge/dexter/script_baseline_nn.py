@@ -26,7 +26,7 @@ epochs = 150
 reps = 1
 verbose = 0
 k_folds = 3
-k_fold_reps = 5
+k_fold_reps = 20
 regularization = 1e-2
 random_state = 42
 optimizer_class = keras_optimizers.Adam
@@ -137,7 +137,7 @@ def main(dataset_name):
             }
 
             print('Starting feature selection')
-            fs_dir = directory + fs_method.__name__ + '_temp/'
+            fs_dir = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
             if not os.path.isdir(fs_dir):
                 os.makedirs(fs_dir)
             fs_filename = fs_dir + fs_method.__name__ + '_iter_' + str(j) + '_seed_' + \
