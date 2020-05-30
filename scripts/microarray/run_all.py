@@ -1,5 +1,4 @@
 import os
-from scripts import microarray
 import importlib
 
 
@@ -16,9 +15,9 @@ is_matlab = False
 def main():
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     for dataset in datasets:
-        # print('RUNNING E2EFS MODELS FOR DATASET: ', dataset)
-        # script_e2efs = importlib.import_module('scripts.microarray.' + dataset + '.script_e2efs')
-        # script_e2efs.main(dataset)
+        print('RUNNING E2EFS MODELS FOR DATASET: ', dataset)
+        script_e2efs = importlib.import_module('scripts.microarray.' + dataset + '.script_e2efs')
+        script_e2efs.main(dataset)
 
         print('RUNNING BASELINE MODELS FOR DATASET: ', dataset)
         script_baseline = importlib.import_module('scripts.microarray.' + dataset + '.script_baseline')

@@ -1,13 +1,11 @@
 import os
-from scripts import fs_challenge
 import importlib
 
 
 datasets = [
-    'colon',
-    'lymphoma',
-    'leukemia',
-    'lung181'
+    'gina',
+    'dexter',
+    'gisette'
 ]
 
 is_matlab = False

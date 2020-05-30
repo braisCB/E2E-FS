@@ -54,7 +54,19 @@ class E2EFS(layers.Layer):
 
         output = inputs * kernel_clipped
 
+        if training in {0, False}:
+            return output
+
+        update_list = self._get_update_list(kernel)
+        self.add_update(update_list, inputs)
+
         return output
+
+    def _get_update_list(self, kernel):
+        update_list = [
+            K.moving_average_update(self.moving_heatmap, K.sign(kernel), self.heatmap_momentum),
+        ]
+        return update_list
 
     def add_to_model(self, model, input_shape, activation=None):
         input = layers.Input(shape=input_shape)
