@@ -1,10 +1,9 @@
 import os
-from scripts import fs_challenge
 import importlib
 
 
 datasets = [
-    'gina',
+    # 'gina',
     'dexter',
     'gisette',
 ]
