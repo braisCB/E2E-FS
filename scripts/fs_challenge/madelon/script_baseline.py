@@ -181,7 +181,7 @@ def main(dataset_name):
                     json.dump(fs_data, outfile)
             print('Finishing feature selection')
 
-            for i, n_features in enumerate([10, 50, 100, 150, 200]):
+            for i, n_features in enumerate([5, 10, 15, 20]):
                 n_accuracies = []
                 n_svc_accuracies = []
                 n_BAs = []

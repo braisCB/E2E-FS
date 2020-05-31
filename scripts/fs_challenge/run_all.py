@@ -15,7 +15,7 @@ is_matlab = False
 def main():
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../../')
     for dataset in datasets:
-        # print('RUNNING E2EFS MODELS FOR DATASET: ', dataset)
+        print('RUNNING E2EFS MODELS FOR DATASET: ', dataset)
         # script_e2efs = importlib.import_module('scripts.fs_challenge.' + dataset + '.script_e2efs')
         # script_e2efs.main(dataset)
         script_e2efs_nn = importlib.import_module('scripts.fs_challenge.' + dataset + '.script_e2efs_nn')

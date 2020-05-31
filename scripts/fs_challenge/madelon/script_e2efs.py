@@ -25,7 +25,7 @@ reps = 1
 verbose = 0
 loss_function = 'square_hinge'
 k_folds = 3
-k_fold_reps = 20
+k_fold_reps = 5
 optimizer_class = optimizers.E2EFS_Adam
 normalization_func = madelon.Normalize
 
@@ -205,7 +205,7 @@ def main(dataset_name):
                 'solver': 0.
             }
 
-            for i, n_features in enumerate([10, 50, 100, 150, 200]):
+            for i, n_features in enumerate([5, 10, 15, 20]):
                 n_accuracies = []
                 n_svc_accuracies = []
                 n_model_accuracies = []

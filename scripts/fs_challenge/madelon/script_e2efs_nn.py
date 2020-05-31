@@ -54,11 +54,9 @@ def e2efs_units(units, input_shape, nepochs):
     return func
 
 
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < extra:
-            return .01 * factor
-        elif epoch < 50 + extra:
+        if epoch < 50 + extra:
             return .01 * factor
         elif epoch < 100 + extra:
             return .002 * factor
@@ -181,7 +179,7 @@ def main(dataset_name):
                 'regularization': regularization
             }
 
-            for i, n_features in enumerate([10, 50, 100, 150, 200]):
+            for i, n_features in enumerate([5, 10, 15, 20]):
                 n_accuracies = []
                 n_model_accuracies = []
                 n_BAs = []
