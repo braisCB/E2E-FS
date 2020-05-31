@@ -3,7 +3,7 @@ import matlab.engine
 import os
 
 
-class InfFS:
+class Matlab_InfFS:
 
     def __init__(self, n_features_to_select=10, alpha=.5, supervised=False, normalize=True, matlab_engine=None):
         self.n_features_to_select = n_features_to_select

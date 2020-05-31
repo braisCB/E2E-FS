@@ -11,12 +11,12 @@ from src.baseline_methods.matlab import Matlab_ILFS, Matlab_infFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
 from keras import backend as K
-import matlab.engine # you need to install MATLAB and the python wrapper
+import matlab.engine  # you need to install MATLAB and the python wrapper
 
 
 fs_methods = [
-    (Matlab_ILFS.ILFS, [4, 5, 6, 8, 11, 20, 30, 50, 100]),
-    (Matlab_infFS.InfFS, [0., 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.])
+    (Matlab_ILFS.Matlab_ILFS, [4, 5, 6, 8, 11, 20, 30, 50, 100]),
+    (Matlab_infFS.Matlab_InfFS, [0., 0.1, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.])
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 

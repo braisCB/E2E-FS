@@ -34,13 +34,15 @@ e2efs_classes = [
 ]
 
 
-def e2efs_factor(epoch):
-    if epoch < 5:
-        return 0., 0., .5
-    elif epoch < extra_epochs:
-        return 1., min(1., .0 + .002 * (epoch - 5)), .5
-    else:
-        return 1., 1., 0.
+def e2efs_factor(T=250):
+    def func(epoch):
+        if epoch < 5:
+            return 0., 0., .5
+        elif epoch < extra_epochs:
+            return 1., min(1., (epoch - 5) / T), .5
+        else:
+            return 1., 1., 0.
+    return func
 
 
 def e2efs_units(units, input_shape, nepochs):
@@ -55,7 +57,7 @@ def e2efs_units(units, input_shape, nepochs):
 def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < extra:
-            return .1 * factor
+            return .01 * factor
         elif epoch < 50 + extra:
             return .01 * factor
         elif epoch < 100 + extra:
@@ -98,7 +100,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:], **e2efs_kwargs)
         model = e2efs_layer.add_to_model(classifier, input_shape=norm_train_X.shape[1:])
         model_clbks.append(
-            clbks.E2EFSCallback(factor_func=e2efs_factor,
+            clbks.E2EFSCallback(factor_func=e2efs_factor(),
                                 units_func=e2efs_units(
                                         n_features, norm_train_X.shape[-1], extra_epochs
                                 ) if 'hard' in e2efs_class.__name__.lower() else None,
