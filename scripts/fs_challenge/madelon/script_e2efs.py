@@ -25,7 +25,7 @@ reps = 1
 verbose = 0
 loss_function = 'square_hinge'
 k_folds = 3
-k_fold_reps = 5
+k_fold_reps = 20
 optimizer_class = optimizers.E2EFS_Adam
 normalization_func = madelon.Normalize
 
