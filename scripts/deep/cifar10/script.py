@@ -15,7 +15,7 @@ from keras import backend as K
 
 batch_size = 128
 regularization = 5e-4
-reps = 3
+reps = 10
 verbose = 2
 warming_up = True
 
