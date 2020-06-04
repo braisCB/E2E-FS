@@ -54,8 +54,10 @@ def e2efs_units(units, input_shape, nepochs):
     return func
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
+        if epoch < extra:
+            return .05 * factor
         if epoch < 50 + extra:
             return .01 * factor
         elif epoch < 100 + extra:
