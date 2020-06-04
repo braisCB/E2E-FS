@@ -16,7 +16,7 @@ Run the following commands:
     cd python
     make lib 
 
-# Running the code
+## Running the code
 Activate the environment:
 
     conda activate e2efs 
