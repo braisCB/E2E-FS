@@ -8,16 +8,10 @@ import json
 import numpy as np
 import os
 from keras.preprocessing.image import ImageDataGenerator
-import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
 from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from keras import backend as K
 
-
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.9
-set_session(tf.Session(config=config))
 
 batch_size = 128
 regularization = 5e-4
