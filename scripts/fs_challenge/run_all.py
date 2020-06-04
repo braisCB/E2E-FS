@@ -3,9 +3,9 @@ import importlib
 
 
 datasets = [
-    # 'gina',
-    # 'dexter',
-    # 'gisette',
+    'gina',
+    'dexter',
+    'gisette',
     'madelon'
 ]
 

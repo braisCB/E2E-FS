@@ -209,7 +209,7 @@ class E2EFSSoft(E2EFS):
             epsilon_plus = K.switch(K.less_equal(m, self.units), self.moving_units, self.moving_factor[2])
             return K.relu(moving_units - sum_x - epsilon_minus) + K.relu(sum_x - moving_units - epsilon_plus)
 
-        self.kernel_regularizer = lambda x: regularizers.l2(.01)(K.relu(x))
+        # self.kernel_regularizer = lambda x: regularizers.l2(.01)(K.relu(x))
 
         super(E2EFSSoft, self).build(input_shape)
 
