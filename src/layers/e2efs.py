@@ -1,9 +1,8 @@
 from keras import backend as K, layers, models, initializers, regularizers
 import numpy as np
-import tensorflow as tf
 
 
-class E2EFS(layers.Layer):
+class E2EFS_Base(layers.Layer):
 
     def __init__(self, units,
                  kernel_initializer='truncated_normal',
@@ -14,7 +13,7 @@ class E2EFS(layers.Layer):
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
-        super(E2EFS, self).__init__(**kwargs)
+        super(E2EFS_Base, self).__init__(**kwargs)
         self.units = units
         self.kernel_initializer = kernel_initializer
         self.kernel_constraint = kernel_constraint
@@ -83,70 +82,12 @@ class E2EFS(layers.Layer):
         return input_shape
 
 
-class E2EFSHard(E2EFS):
-
-    def __init__(self, units,
-                 kernel_initializer='ones',
-                 l1=1.,
-                 l2=1.,
-                 dropout=.1,
-                 **kwargs):
-
-        self.l1 = l1
-        self.l2 = l2
-        self.dropout = dropout
-        super(E2EFSHard, self).__init__(units=units,
-                                        kernel_initializer=kernel_initializer,
-                                        **kwargs)
-
-    def build(self, input_shape):
-        assert len(input_shape) >= 2
-        self.moving_units = self.add_weight(shape=(),
-                                            name='moving_units',
-                                            initializer=initializers.constant(self.units),
-                                            trainable=False)
-
-        def apply_dropout(x):
-            if 0. < self.dropout < 1.:
-                def dropped_inputs():
-                    x_shape = K.int_shape(x)
-                    noise = K.random_uniform(x_shape)
-                    return K.switch(K.less(noise, self.dropout), -1000. * K.ones_like(x), x)
-                return K.in_train_phase(dropped_inputs, x)
-            return x
-
-        def kernel_activation():
-            @tf.custom_gradient
-            def func(x):
-                x_shape = K.int_shape(x)
-                x = apply_dropout(x)
-                _, top_k = tf.nn.top_k(x, k=x_shape[0])
-                _, ranks = tf.nn.top_k(-top_k, k=x_shape[0])
-                mask = K.cast(K.cast(ranks, K.floatx()) < self.moving_units, K.floatx())
-                h = mask * K.relu(x)
-
-                def grad(dy, variables=None):
-                    return mask * dy * K.relu(K.sign(x)), [K.ones_like(v) for v in variables]
-
-                return h, grad
-
-            return func
-        self.kernel_activation = kernel_activation()
-
-        def kernel_regularizer(x):
-            return self.l1 * K.mean(K.abs(x)) + self.l2 * K.mean(K.square(x))
-
-        self.kernel_regularizer = kernel_regularizer
-
-        super(E2EFSHard, self).build(input_shape)
-
-
-class E2EFSSoft(E2EFS):
+class E2EFSSoft(E2EFS_Base):
 
     def __init__(self, units,
                  dropout=.1,
                  decay_factor=.75,
-                 kernel_regularizer=regularizers.l2(1e-2),
+                 kernel_regularizer=None,
                  init_value=None,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
@@ -225,3 +166,19 @@ class E2EFSSoft(E2EFS):
             return cost, K.sum(p * (1. - p)), K.sum(p), -K.sum(K.square(p))
 
         self.regularization_loss = regularization(self.kernel)
+
+
+class E2EFS(E2EFSSoft):
+
+    def __init__(self, units,
+                 dropout=.1,
+                 init_value=None,
+                 **kwargs):
+        if 'input_shape' not in kwargs and 'input_dim' in kwargs:
+            kwargs['input_shape'] = (kwargs.pop('input_dim'),)
+
+        super(E2EFS, self).__init__(units=units,
+                                    dropout=dropout,
+                                    decay_factor=0.,
+                                    init_value=init_value,
+                                    **kwargs)

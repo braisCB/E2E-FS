@@ -22,17 +22,17 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
 e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75, 'kernel_regularizer': regularizers.l2(1e-2)}),
-    (e2efs.E2EFSHard, {'dropout': .1, 'l1': 1e0, 'l2': 1e0}),
+    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 200),
+    (e2efs.E2EFS, {'dropout': .1}, 300, 300),
 ]
 
 
 def e2efs_factor(T=250):
     def func(epoch):
         if epoch < 5:
-            return 0., 0., .5
+            return 0., 0., 0.
         elif epoch < 140:
-            return 1., (epoch - 5) / T, .5
+            return 1., (epoch - 5) / T, .0
         else:
             return 1., 1., 0.
     return func
@@ -137,7 +137,7 @@ def main():
             del model
             K.clear_session()
 
-        for e2efs_class, e2efs_kwargs in e2efs_classes:
+        for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
             nfeats = []
             accuracies = []
 
