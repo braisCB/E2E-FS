@@ -22,8 +22,8 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
 e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 80),
-    (e2efs.E2EFS, {'dropout': .1}, 100, 80),
+    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 200),
+    (e2efs.E2EFS, {'dropout': .1}, 300, 300),
 ]
 
 
