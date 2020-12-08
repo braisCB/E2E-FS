@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import gisette
+from dataset_reader import gina
 from src.layers import e2efs
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
@@ -12,6 +12,8 @@ from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
 from keras import backend as K
 from src import callbacks as clbks, optimizers
+import time
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -27,40 +29,15 @@ loss_function = 'square_hinge'
 k_folds = 3
 k_fold_reps = 20
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = gisette.Normalize
+normalization_func = gina.Normalize
 
-dataset_name = 'gisette'
+dataset_name = 'gina'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 200),
-    (e2efs.E2EFS, {'dropout': .1}, 300, 300),
-]
+e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
-def e2efs_factor(T=250):
-    def func(epoch):
-        if epoch < 5:
-            return 0., 0., 0.
-        elif epoch < extra_epochs:
-            return 1., min(1., (epoch - 5) / T), .0
-        else:
-            return 1., 1., 0.
-    return func
-
-
-def e2efs_units(units, input_shape, T):
-    p = (units / input_shape) ** (1. / T)
-
-    def func(epoch):
-        return max(units, input_shape*p**epoch)
-
-    return func
-
-
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < extra:
-            return .05 * factor
         if epoch < 50 + extra:
             return .01 * factor
         elif epoch < 100 + extra:
@@ -71,12 +48,23 @@ def scheduler(extra=0, factor=.1):
     return sch
 
 
+def fs_scheduler(extra=0, factor=1.):
+    def sch(epoch):
+        if epoch < 1000 + extra:
+            return .01 * factor
+        elif epoch < 2000 + extra:
+            return .002 * factor
+        else:
+            return .0004 * factor
+
+    return sch
+
 def load_dataset():
-    dataset = gisette.load_dataset()
+    dataset = gina.load_dataset()
     return dataset
 
 
-def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, e2efs_kwargs=None, T=300, extra=300):
+def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, epochs=150):
     normalization = normalization_func()
     num_classes = train_y.shape[-1]
 
@@ -98,15 +86,19 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
     svc_model.create_keras_model(nclasses=num_classes)
 
     model_clbks = [
-        callbacks.LearningRateScheduler(scheduler(extra=0 if e2efs_class is None else extra)),
+        callbacks.LearningRateScheduler(scheduler()),
+    ]
+
+    fs_callbacks = [
+        callbacks.LearningRateScheduler(fs_scheduler())
     ]
 
     if e2efs_class is not None:
         classifier = svc_model.model
-        e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:], **e2efs_kwargs)
+        e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:])
         model = e2efs_layer.add_to_model(classifier, input_shape=norm_train_X.shape[1:])
-        model_clbks.append(
-            clbks.E2EFSCallback(factor_func=e2efs_factor(T),
+        fs_callbacks.append(
+            clbks.E2EFSCallback(factor_func=None,
                                 units_func=None,
                                 verbose=verbose)
         )
@@ -115,9 +107,6 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         e2efs_layer = None
 
     optimizer = optimizer_class(e2efs_layer, lr=1e-3)
-    model_epochs = epochs
-    if e2efs_class is not None:
-        model_epochs += extra_epochs
 
     model.compile(
         loss=LinearSVC.loss_function(loss_function, class_weight),
@@ -129,9 +118,21 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         model.fs_layer = e2efs_layer
         model.heatmap = e2efs_layer.moving_heatmap
 
+        start_time = time.process_time()
+        model.fit(
+            norm_train_X, train_y, batch_size=batch_size,
+            epochs=200000,
+            callbacks=fs_callbacks,
+            validation_data=(norm_test_X, test_y),
+            class_weight=class_weight,
+            sample_weight=sample_weight,
+            verbose=verbose
+        )
+        model.fs_time = time.process_time() - start_time
+
     model.fit(
         norm_train_X, train_y, batch_size=batch_size,
-        epochs=model_epochs,
+        epochs=epochs,
         callbacks=model_clbks,
         validation_data=(norm_test_X, test_y),
         class_weight=class_weight,
@@ -160,13 +161,16 @@ def main(dataset_name):
 
     rskf = RepeatedStratifiedKFold(n_splits=k_folds, n_repeats=k_fold_reps, random_state=42)
 
-    for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
+    for e2efs_class in e2efs_classes:
         print('E2EFS-Method : ', e2efs_class.__name__)
+        seeds = np.arange(1000).astype(int)
+        cont_seed = 0
 
         nfeats = []
         accuracies = []
         model_accuracies = []
         svc_accuracies = []
+        fs_time = []
         BAs = []
         svc_BAs = []
         model_BAs = []
@@ -215,15 +219,21 @@ def main(dataset_name):
                 n_svc_mAPs = []
                 n_model_mAPs = []
                 n_train_accuracies = []
+                n_time = []
                 print('n_features : ', n_features)
 
                 heatmaps = []
                 for r in range(reps):
+                    np.random.seed(cont_seed)
+                    K.tf.set_random_seed(cont_seed)
+                    cont_seed += 1
+
                     model = train_Keras(
                         train_data, train_labels, test_data, test_labels, model_kwargs,
-                        e2efs_class=e2efs_class, n_features=n_features, e2efs_kwargs=e2efs_kwargs
+                        e2efs_class=e2efs_class, n_features=n_features,
                     )
                     heatmaps.append(K.eval(model.heatmap))
+                    n_time.append(model.fs_time)
                     test_data_norm = model.normalization.transform(test_data)
                     train_data_norm = model.normalization.transform(train_data)
                     test_pred = model.predict(test_data_norm)
@@ -235,7 +245,8 @@ def main(dataset_name):
                           ', accuracy : ', n_model_accuracies[-1],
                           ', BA : ', n_model_BAs[-1],
                           ', mAP : ', n_model_mAPs[-1],
-                          ', train_accuracy : ', train_acc)
+                          ', train_accuracy : ', train_acc,
+                          ', time : ', n_time[-1], 's')
                     del model
                     K.clear_session()
 
@@ -266,6 +277,10 @@ def main(dataset_name):
                 print('Best -> C:', bestc, ', s:', bestSolver, ', acc:', bestcv)
 
                 for r in range(reps):
+                    np.random.seed(cont_seed)
+                    K.tf.set_random_seed(cont_seed)
+                    cont_seed += 1
+
                     model = train_SVC(svc_train_data_norm, train_labels, svc_kwargs)
                     _, accuracy, test_pred = liblinearutil.predict(
                         (2 * test_labels[:, -1] - 1).tolist(), svc_test_data_norm.tolist(), model, '-q'
@@ -301,6 +316,7 @@ def main(dataset_name):
                     model_accuracies.append(n_model_accuracies)
                     BAs.append(n_BAs)
                     mAPs.append(n_mAPs)
+                    fs_time.append(n_time)
                     svc_BAs.append(n_svc_BAs)
                     svc_mAPs.append(n_svc_mAPs)
                     model_BAs.append(n_model_BAs)
@@ -311,6 +327,7 @@ def main(dataset_name):
                     accuracies[i] += n_accuracies
                     svc_accuracies[i] += n_svc_accuracies
                     model_accuracies[i] += n_model_accuracies
+                    fs_time[i] += n_time
                     BAs[i] += n_BAs
                     mAPs[i] += n_mAPs
                     svc_BAs[i] += n_svc_BAs
@@ -347,6 +364,7 @@ def main(dataset_name):
                 'model_mean_BA': np.array(model_BAs).mean(axis=1).tolist(),
                 'model_mAP': model_mAPs,
                 'model_mean_mAP': np.array(model_mAPs).mean(axis=1).tolist(),
+                'fs_time': fs_time
             }
         }
 

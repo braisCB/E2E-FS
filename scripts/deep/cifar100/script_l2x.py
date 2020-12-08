@@ -1,8 +1,8 @@
 from keras.utils import to_categorical
-from keras import callbacks, regularizers
+from keras import callbacks, regularizers, layers, models, optimizers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
-from keras.datasets import cifar10
+from keras.datasets import cifar100
 from src.wrn import network_models
 import json
 import numpy as np
@@ -11,13 +11,14 @@ from keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from keras import backend as K
+import tensorflow as tf
 
 
 batch_size = 128
 regularization = 5e-4
-reps = 10
+reps = 1
 verbose = 2
-warming_up = True
+warming_up = False
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
@@ -27,15 +28,86 @@ e2efs_classes = [
 ]
 
 
-def e2efs_factor(T=250):
-    def func(epoch):
-        if epoch < 5:
-            return 0., 0., 0.
-        elif epoch < 140:
-            return 1., (epoch - 5) / T, .0
-        else:
-            return 1., 1., 0.
-    return func
+def create_rank(scores, k):
+    """
+    Compute rank of each feature based on weight.
+
+    """
+    scores = abs(scores)
+    n, d = scores.shape
+    ranks = []
+    for i, score in enumerate(scores):
+        # Random permutation to avoid bias due to equal weights.
+        idx = np.random.permutation(d)
+        permutated_weights = score[idx]
+        permutated_rank = (-permutated_weights).argsort().argsort() + 1
+        rank = permutated_rank[np.argsort(idx)]
+
+        ranks.append(rank)
+
+    return np.array(ranks)
+
+def compute_median_rank(scores, k):
+    ranks = create_rank(scores, k)
+    median_ranks = np.median(ranks[:,:k], axis = 1)
+    return median_ranks
+
+
+class Sample_Concrete(layers.Layer):
+    """
+    Layer for sample Concrete / Gumbel-Softmax variables.
+
+    """
+
+    def __init__(self, tau0, k, **kwargs):
+        self.tau0 = tau0
+        self.k = k
+        super(Sample_Concrete, self).__init__(**kwargs)
+
+    def call(self, logits):
+        # logits: [BATCH_SIZE, d]
+        logits_ = K.expand_dims(logits, -2)  # [BATCH_SIZE, 1, d]
+
+        batch_size = tf.shape(logits_)[0]
+        d = tf.shape(logits_)[2]
+        uniform = tf.random.uniform(shape=(batch_size, self.k, d),
+                                    minval=np.finfo(tf.float32.as_numpy_dtype).tiny,
+                                    maxval=1.0)
+
+        gumbel = - K.log(-K.log(uniform))
+        noisy_logits = (gumbel + logits_) / self.tau0
+        samples = K.softmax(noisy_logits)
+        samples = K.max(samples, axis=1)
+
+        # Explanation Stage output.
+        threshold = tf.expand_dims(tf.nn.top_k(logits, self.k, sorted=True)[0][:, -1], -1)
+        discrete_logits = tf.cast(tf.greater_equal(logits, threshold), tf.float32)
+
+        return K.in_train_phase(samples, discrete_logits)
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
+def get_l2x_model(input_shape, nfeatures):
+    activation = 'relu'
+    # P(S|X)
+    model_input = layers.Input(shape=input_shape, dtype='float32')
+
+    net = layers.Flatten()(model_input)
+    net = layers.Dense(100, activation=activation, name='s/dense1',
+                kernel_regularizer=regularizers.l2(1e-3))(net)
+    net = layers.Dense(100, activation=activation, name='s/dense2',
+                kernel_regularizer=regularizers.l2(1e-3))(net)
+
+    # A tensor of shape, [batch_size, max_sents, 100]
+    logits = layers.Dense(np.prod(input_shape))(net)
+    # [BATCH_SIZE, max_sents, 1]
+    tau = 0.1
+    samples = Sample_Concrete(tau, nfeatures, name='sample')(logits)
+    samples = layers.Reshape(input_shape)(samples)
+    return models.Model(model_input, samples)
+
 
 
 def scheduler(extra=0, factor=1.):
@@ -52,7 +124,7 @@ def scheduler(extra=0, factor=1.):
 
 
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    (x_train, y_train), (x_test, y_test) = cifar100.load_data()
     generator = ImageDataGenerator(
         horizontal_flip=True,
         height_shift_range=5./32.,
@@ -99,7 +171,7 @@ def main():
         }
 
         print('reps : ', reps)
-        name = 'cifar10_' + network_name + '_r_' + str(regularization)
+        name = 'cifar100_' + network_name + '_r_' + str(regularization)
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
@@ -140,31 +212,48 @@ def main():
 
                 for r in range(reps):
                     print('factor : ', factor, ' , rep : ', r)
+                    l2x_model = get_l2x_model(train_data.shape[1:], n_features)
                     classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], **e2efs_kwargs)
-                    model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                    optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    output = classifier(l2x_model.output)
+                    model = models.Model(l2x_model.input, output)
+
+                    optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
-                    model.fs_layer = e2efs_layer
                     model.classifier = classifier
                     model.summary()
                     model.fit_generator(
                         generator.flow(train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=extra_epochs+110,
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
                         callbacks=[
-                            callbacks.LearningRateScheduler(scheduler(extra=extra_epochs)),
-                            E2EFSCallback(factor_func=e2efs_factor(T),
-                                              units_func=None,
-                                              verbose=verbose)
+                            callbacks.LearningRateScheduler(scheduler(extra=0)),
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
                         verbose=verbose
                     )
-                    n_heatmaps.append(K.eval(model.heatmap).tolist())
-                    n_accuracies.append(model.evaluate(test_data, test_labels, verbose=0)[-1])
-                    del model
+                    scores = l2x_model.predict(train_data, verbose=0, batch_size=batch_size).reshape((-1, np.prod(train_data.shape[1:]))).sum(axis=0)
+                    pos = np.argsort(scores)[::-1][:n_features]
+                    mask = np.zeros_like(scores)
+                    mask[pos] = 1.
+                    mask = mask.reshape(train_data.shape[1:])
+                    del l2x_model, classifier, model
+                    K.clear_session()
+                    classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(
+                        input_shape=train_data.shape[1:], **model_kwargs)
+                    classifier.fit_generator(
+                        generator.flow(mask * train_data, train_labels, **generator_kwargs),
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                        callbacks=[
+                            callbacks.LearningRateScheduler(scheduler(extra=0)),
+                        ],
+                        validation_data=(mask * test_data, test_labels),
+                        validation_steps=test_data.shape[0] // batch_size,
+                        verbose=verbose
+                    )
+
+                    n_accuracies.append(classifier.evaluate(test_data, test_labels, verbose=0)[-1])
+                    del classifier
                     K.clear_session()
                 print(
                     'n_features : ', n_features, ', acc : ', n_accuracies
@@ -173,7 +262,7 @@ def main():
                 nfeats.append(n_features)
 
             output_filename = directory + network_name + '_' + e2efs_class.__name__ + \
-                              '_e2efs_results_warming_' + str(warming_up) + '.json'
+                              '_l2x_results_warming_' + str(warming_up) + '.json'
 
             try:
                 with open(output_filename) as outfile:

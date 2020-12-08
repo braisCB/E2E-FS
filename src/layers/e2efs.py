@@ -1,9 +1,8 @@
 from keras import backend as K, layers, models, initializers, regularizers
 import numpy as np
-import tensorflow as tf
 
 
-class E2EFS(layers.Layer):
+class E2EFS_Base(layers.Layer):
 
     def __init__(self, units,
                  kernel_initializer='truncated_normal',
@@ -14,7 +13,7 @@ class E2EFS(layers.Layer):
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
-        super(E2EFS, self).__init__(**kwargs)
+        super(E2EFS_Base, self).__init__(**kwargs)
         self.units = units
         self.kernel_initializer = kernel_initializer
         self.kernel_constraint = kernel_constraint
@@ -83,103 +82,52 @@ class E2EFS(layers.Layer):
         return input_shape
 
 
-class E2EFSHard(E2EFS):
+class E2EFSSoft(E2EFS_Base):
 
     def __init__(self, units,
+                 dropout=.0,
+                 decay_factor=.5,
+                 kernel_regularizer=None,
                  kernel_initializer='ones',
-                 l1=1.,
-                 l2=1.,
-                 dropout=.1,
-                 **kwargs):
-
-        self.l1 = l1
-        self.l2 = l2
-        self.dropout = dropout
-        super(E2EFSHard, self).__init__(units=units,
-                                        kernel_initializer=kernel_initializer,
-                                        **kwargs)
-
-    def build(self, input_shape):
-        assert len(input_shape) >= 2
-        self.moving_units = self.add_weight(shape=(),
-                                            name='moving_units',
-                                            initializer=initializers.constant(self.units),
-                                            trainable=False)
-
-        def apply_dropout(x):
-            if 0. < self.dropout < 1.:
-                def dropped_inputs():
-                    x_shape = K.int_shape(x)
-                    noise = K.random_uniform(x_shape)
-                    return K.switch(K.less(noise, self.dropout), -1000. * K.ones_like(x), x)
-                return K.in_train_phase(dropped_inputs, x)
-            return x
-
-        def kernel_activation():
-            @tf.custom_gradient
-            def func(x):
-                x_shape = K.int_shape(x)
-                x = apply_dropout(x)
-                _, top_k = tf.nn.top_k(x, k=x_shape[0])
-                _, ranks = tf.nn.top_k(-top_k, k=x_shape[0])
-                mask = K.cast(K.cast(ranks, K.floatx()) < self.moving_units, K.floatx())
-                h = mask * K.relu(x)
-
-                def grad(dy, variables=None):
-                    return mask * dy * K.relu(K.sign(x)), [K.ones_like(v) for v in variables]
-
-                return h, grad
-
-            return func
-        self.kernel_activation = kernel_activation()
-
-        def kernel_regularizer(x):
-            return self.l1 * K.mean(K.abs(x)) + self.l2 * K.mean(K.square(x))
-
-        self.kernel_regularizer = kernel_regularizer
-
-        super(E2EFSHard, self).build(input_shape)
-
-
-class E2EFSSoft(E2EFS):
-
-    def __init__(self, units,
-                 dropout=.1,
-                 decay_factor=.75,
-                 kernel_regularizer=regularizers.l2(1e-2),
-                 init_value=None,
+                 T=100000,
+                 warmup_T=2000,
+                 start_alpha=.0,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
 
         self.dropout = dropout
         self.decay_factor = decay_factor
-        self.init_value = init_value
+        self.T = T
+        self.warmup_T = warmup_T
+        self.start_alpha = start_alpha
+        self.cont_T = 0
         super(E2EFSSoft, self).__init__(units=units,
                                         kernel_regularizer=kernel_regularizer,
+                                        kernel_initializer=kernel_initializer,
                                         **kwargs)
 
     def build(self, input_shape):
         assert len(input_shape) >= 2
-        input_dim = int(np.prod(input_shape[1:]))
 
         self.moving_units = self.add_weight(shape=(),
                                             name='moving_units',
                                             initializer=initializers.constant(self.units),
                                             trainable=False)
-        self.moving_factor = self.add_weight(shape=(3, ),
+        self.moving_T = self.add_weight(shape=(),
+                                        name='moving_T',
+                                        initializer='zeros',
+                                        trainable=False)
+        self.moving_factor = self.add_weight(shape=(),
                                              name='moving_factor',
-                                             initializer=initializers.constant([1., .1, .5]),
+                                             initializer=initializers.constant([0.]),
                                              trainable=False)
         self.cont = self.add_weight(shape=(),
                                     name='cont',
                                     initializer='ones',
                                     trainable=False)
 
-        init_value = self.init_value if self.init_value is not None else max(.05, self.units / input_dim)
-        self.kernel_initializer = initializers.constant(init_value)
-
-        def apply_dropout(x,  rate, refactor=False):
+        def apply_dropout(x, rate, refactor=False):
             if 0. < self.dropout < 1.:
                 def dropped_inputs():
                     x_shape = K.int_shape(x)
@@ -192,21 +140,26 @@ class E2EFSSoft(E2EFS):
         def kernel_activation(x):
             x = apply_dropout(x, self.dropout, False)
             t = x / K.max(K.abs(x))
-            s = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), K.clip(x, 0., 1.))
-            s /= K.stop_gradient(K.max(s))
+            s = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), x)
+            # s /= K.stop_gradient(K.max(s))
             return s
 
         self.kernel_activation = kernel_activation
 
+        def kernel_constraint(x):
+            return K.clip(x, 0., 1.)
+
+        self.kernel_constraint = kernel_constraint
+
         def loss_units(x):
             t = x / K.max(K.abs(x))
-            x = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), x)
+            x = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), K.clip(x, 0., 1.))
             m = K.sum(K.cast(K.greater(x, 0.), K.floatx()))
             sum_x = K.sum(x)
             moving_units = K.switch(K.less_equal(m, self.units), m,
                                     (1. - self.decay_factor) * self.moving_units)
-            epsilon_minus = K.switch(K.less_equal(m, self.units), 0., self.moving_factor[2])
-            epsilon_plus = K.switch(K.less_equal(m, self.units), self.moving_units, self.moving_factor[2])
+            epsilon_minus = 0.
+            epsilon_plus = K.switch(K.less_equal(m, self.units), self.moving_units, 0.)
             return K.relu(moving_units - sum_x - epsilon_minus) + K.relu(sum_x - moving_units - epsilon_plus)
 
         # self.kernel_regularizer = lambda x: regularizers.l2(.01)(K.relu(x))
@@ -216,12 +169,38 @@ class E2EFSSoft(E2EFS):
         def regularization(x):
             l_units = loss_units(x)
             t = x / K.max(K.abs(x))
-            x = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), x)
-            p = K.clip(x, 0., 1.)
+            p = K.switch(K.less(t, K.epsilon()), K.zeros_like(x), x)
             cost = K.cast_to_floatx(0.)
             cost += K.sum(p * (1. - p)) + l_units
-            cost += K.sum(K.relu(x - 1.))
-
-            return cost, K.sum(p * (1. - p)), K.sum(p), -K.sum(K.square(p))
+            # cost += K.sum(K.relu(x - 1.))
+            return cost
 
         self.regularization_loss = regularization(self.kernel)
+
+    def _get_update_list(self, kernel):
+        update_list = super(E2EFSSoft, self)._get_update_list(kernel)
+        update_list += [
+            (self.moving_factor, K.switch(K.less(self.moving_T, self.warmup_T),
+                                          self.start_alpha,
+                                          K.minimum(1., self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
+            (self.moving_T, self.moving_T + 1)
+        ]
+        return update_list
+
+
+class E2EFS(E2EFSSoft):
+
+    def __init__(self, units,
+                 dropout=.0,
+                 kernel_initializer='ones',
+                 **kwargs):
+        if 'input_shape' not in kwargs and 'input_dim' in kwargs:
+            kwargs['input_shape'] = (kwargs.pop('input_dim'),)
+
+        super(E2EFS, self).__init__(units=units,
+                                    dropout=dropout,
+                                    kernel_regularizer=None,
+                                    decay_factor=0.,
+                                    kernel_initializer=kernel_initializer,
+                                    T=50000,
+                                    **kwargs)

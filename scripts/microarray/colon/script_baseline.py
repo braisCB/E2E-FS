@@ -11,6 +11,7 @@ from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
 from keras import backend as K
+import time
 
 
 fs_methods = [
@@ -38,14 +39,17 @@ dataset_name = 'colon'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 
 
-def scheduler(extra=0, factor=.1):
+initial_lr = .01
+
+
+def scheduler():
     def sch(epoch):
-        if epoch < 50 + extra:
-            return .01 * factor
-        elif epoch < 100 + extra:
-            return .002 * factor
+        if epoch < 50:
+            return initial_lr
+        elif epoch < 100:
+            return .2 * initial_lr
         else:
-            return .0004 * factor
+            return .04 * initial_lr
 
     return sch
 
@@ -77,7 +81,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs):
     svc_model.create_keras_model(nclasses=num_classes, warming_up=False)
     model = svc_model.model
 
-    optimizer = optimizer_class(lr=1e-3)
+    optimizer = optimizer_class(lr=initial_lr)
 
     model.compile(
         loss=LinearSVC.loss_function('square_hinge', class_weight),
@@ -120,12 +124,14 @@ def main(dataset_name):
 
     for fs_method in fs_methods:
         print('FS-Method : ', fs_method.__name__)
+        cont_seed = 0
 
         nfeats = []
         accuracies = []
         svc_accuracies = []
         BAs = []
         svc_BAs = []
+        fs_time = []
         mAPs = []
         svc_mAPs = []
         mus = []
@@ -170,16 +176,19 @@ def main(dataset_name):
                 fs_class = fs_method(n_features_to_select=200)
                 fs_class.score = np.asarray(fs_data['score'])
                 fs_class.ranking = np.asarray(fs_data['ranking'])
+                fs_time.append(np.NAN)
             else:
+                start_time = time.process_time()
                 fs_class = fs_method(n_features_to_select=200)
                 fs_class.fit(train_data, 2. * train_labels[:, -1] - 1.)
                 fs_data = {
                     'score': fs_class.score.tolist(),
                     'ranking': fs_class.ranking.tolist()
                 }
+                fs_time.append(time.process_time() - start_time)
                 with open(fs_filename, 'w') as outfile:
                     json.dump(fs_data, outfile)
-            print('Finishing feature selection')
+            print('Finishing feature selection. Time : ', fs_time[-1], 's')
 
             for i, n_features in enumerate([10, 50, 100, 150, 200]):
                 n_accuracies = []
@@ -215,6 +224,10 @@ def main(dataset_name):
                 print('Best -> C:', bestc, ', s:', bestSolver, ', acc:', bestcv)
 
                 for r in range(reps):
+                    np.random.seed(cont_seed)
+                    K.tf.set_random_seed(cont_seed)
+                    cont_seed += 1
+
                     model = train_SVC(svc_train_data_norm, train_labels, svc_kwargs)
                     _, accuracy, test_pred = liblinearutil.predict(
                         (2 * test_labels[:, -1] - 1).tolist(), svc_test_data_norm.tolist(), model, '-q'
@@ -291,6 +304,7 @@ def main(dataset_name):
                 'svc_mean_BA': np.array(svc_BAs).mean(axis=1).tolist(),
                 'svc_mAP': svc_mAPs,
                 'svc_mean_mAP': np.array(svc_mAPs).mean(axis=1).tolist(),
+                'fs_time': fs_time
             }
         }
 

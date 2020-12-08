@@ -57,7 +57,7 @@ class LinearSVC(object):
         input = Input(shape=self.nfeatures)
         x = input
         classifier = Dense(
-            nclasses - 1, use_bias=True, kernel_initializer='zeros',
+            nclasses - 1, use_bias=True, kernel_initializer='he_normal',
             bias_initializer='zeros', input_shape=K.int_shape(x)[-1:],
             kernel_regularizer=regularizers.l2(self.mu)
         )

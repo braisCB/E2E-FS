@@ -22,17 +22,17 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
 e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75, 'kernel_regularizer': regularizers.l2(1e-2)}),
-    (e2efs.E2EFSHard, {'dropout': .1, 'l1': 1e0, 'l2': 1e0}),
+    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 80),
+    (e2efs.E2EFS, {'dropout': .1}, 100, 80),
 ]
 
 
 def e2efs_factor(T=250):
     def func(epoch):
         if epoch < 5:
-            return 0., 0., .5
+            return 0., 0., 0.
         elif epoch < 140:
-            return 1., (epoch - 5) / T, .5
+            return 1., (epoch - 5) / T, .0
         else:
             return 1., 1., 0.
     return func
@@ -91,6 +91,9 @@ def main():
 
     for network_name in network_names:
 
+        seeds = np.arange(1000).astype(int)
+        cont_seed = 0
+
         train_data = np.asarray(dataset['train']['data'])
         train_labels = dataset['train']['label']
         num_classes = len(np.unique(train_labels))
@@ -137,7 +140,7 @@ def main():
             del model
             K.clear_session()
 
-        for e2efs_class, e2efs_kwargs in e2efs_classes:
+        for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
             nfeats = []
             accuracies = []
 
@@ -159,13 +162,11 @@ def main():
                     model.summary()
                     model.fit_generator(
                         generator.flow(train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=190,
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=extra_epochs+110,
                         callbacks=[
-                            callbacks.LearningRateScheduler(scheduler(extra=80)),
-                            E2EFSCallback(factor_func=e2efs_factor(),
-                                              units_func=e2efs_units(
-                                                  n_features, total_features, 100
-                                              ) if 'hard' in e2efs_class.__name__.lower() else None,
+                            callbacks.LearningRateScheduler(scheduler(extra=extra_epochs)),
+                            E2EFSCallback(factor_func=e2efs_factor(T),
+                                              units_func=None,
                                               verbose=verbose)
                         ],
                         validation_data=(test_data, test_labels),

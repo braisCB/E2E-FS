@@ -32,17 +32,17 @@ normalization_func = dexter.Normalize
 dataset_name = 'dexter'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75, 'kernel_regularizer': regularizers.l2(1e-2)}),
-    (e2efs.E2EFSHard, {'dropout': .1, 'l1': 1e0, 'l2': 1e0}),
+    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 200),
+    (e2efs.E2EFS, {'dropout': .1}, 300, 300),
 ]
 
 
 def e2efs_factor(T=250):
     def func(epoch):
         if epoch < 5:
-            return 0., 0., .5
+            return 0., 0., 0.
         elif epoch < extra_epochs:
-            return 1., min(1., (epoch - 5) / T), .5
+            return 1., min(1., (epoch - 5) / T), .0
         else:
             return 1., 1., 0.
     return func
@@ -74,7 +74,7 @@ def load_dataset():
     return dataset
 
 
-def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, e2efs_kwargs=None):
+def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, e2efs_kwargs=None, T=300, extra=300):
     normalization = normalization_func()
     num_classes = train_y.shape[-1]
 
@@ -96,7 +96,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
     svc_model.create_keras_model(nclasses=num_classes)
 
     model_clbks = [
-        callbacks.LearningRateScheduler(scheduler(extra=0 if e2efs_class is None else extra_epochs)),
+        callbacks.LearningRateScheduler(scheduler(extra=0 if e2efs_class is None else extra)),
     ]
 
     if e2efs_class is not None:
@@ -104,10 +104,8 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:], **e2efs_kwargs)
         model = e2efs_layer.add_to_model(classifier, input_shape=norm_train_X.shape[1:])
         model_clbks.append(
-            clbks.E2EFSCallback(factor_func=e2efs_factor(),
-                                units_func=e2efs_units(
-                                    n_features, norm_train_X.shape[-1], extra_epochs
-                                ) if 'hard' in e2efs_class.__name__.lower() else None,
+            clbks.E2EFSCallback(factor_func=e2efs_factor(T),
+                                units_func=None,
                                 verbose=verbose)
         )
     else:
@@ -160,7 +158,7 @@ def main(dataset_name):
 
     rskf = RepeatedStratifiedKFold(n_splits=k_folds, n_repeats=k_fold_reps, random_state=42)
 
-    for e2efs_class, e2efs_kwargs in e2efs_classes:
+    for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
         print('E2EFS-Method : ', e2efs_class.__name__)
 
         nfeats = []

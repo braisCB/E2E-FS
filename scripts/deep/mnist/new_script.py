@@ -2,7 +2,7 @@ from keras.utils import to_categorical
 from keras import callbacks, regularizers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
-from keras.datasets import cifar10
+from keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
@@ -11,6 +11,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from keras import backend as K
+import tensorflow as tf
 
 
 batch_size = 128
@@ -21,30 +22,16 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
-e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 80),
-    (e2efs.E2EFS, {'dropout': .1}, 100, 80),
-]
-
-
-def e2efs_factor(T=250):
-    def func(epoch):
-        if epoch < 5:
-            return 0., 0., 0.
-        elif epoch < 140:
-            return 1., (epoch - 5) / T, .0
-        else:
-            return 1., 1., 0.
-    return func
+e2efs_classes = [e2efs.E2EFS]
 
 
 def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < 30 + extra:
+        if epoch < 10 + extra:
             return .1 * factor
-        elif epoch < 60 + extra:
+        elif epoch < 40 + extra:
             return .02 * factor
-        elif epoch < 90 + extra:
+        elif epoch < 70 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -52,12 +39,11 @@ def scheduler(extra=0, factor=1.):
 
 
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    x_train = np.expand_dims(x_train, axis=-1)
+    x_test = np.expand_dims(x_test, axis=-1)
     generator = ImageDataGenerator(
-        horizontal_flip=True,
-        height_shift_range=5./32.,
-        width_shift_range=5./32.,
-        fill_mode='reflect'
+        # horizontal_flip=True,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -99,7 +85,7 @@ def main():
         }
 
         print('reps : ', reps)
-        name = 'cifar10_' + network_name + '_r_' + str(regularization)
+        name = 'mnist_' + network_name + '_r_' + str(regularization)
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
@@ -109,8 +95,11 @@ def main():
         total_features = int(np.prod(train_data.shape[1:]))
 
         model_filename = directory + network_name + '_trained_model.h5'
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
         if not os.path.exists(model_filename) and warming_up:
-
+            np.random.seed(1001)
+            tf.set_random_seed(1001)
             model = getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
             print('training_model')
             model.fit_generator(
@@ -123,15 +112,16 @@ def main():
                 validation_steps=test_data.shape[0] // batch_size,
                 verbose=verbose
             )
-            if not os.path.isdir(directory):
-                os.makedirs(directory)
+
             model.save(model_filename)
             del model
             K.clear_session()
 
-        for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
+        for e2efs_class in e2efs_classes:
             nfeats = []
             accuracies = []
+
+            cont_seed = 0
 
             for factor in [.05, .1, .25, .5]:
                 n_features = int(total_features * factor)
@@ -140,8 +130,11 @@ def main():
 
                 for r in range(reps):
                     print('factor : ', factor, ' , rep : ', r)
+                    np.random.seed(cont_seed)
+                    tf.set_random_seed(cont_seed)
+                    cont_seed += 1
                     classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], **e2efs_kwargs)
+                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:])
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
                     optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
@@ -151,12 +144,21 @@ def main():
                     model.summary()
                     model.fit_generator(
                         generator.flow(train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=extra_epochs+110,
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                         callbacks=[
-                            callbacks.LearningRateScheduler(scheduler(extra=extra_epochs)),
-                            E2EFSCallback(factor_func=e2efs_factor(T),
+                            E2EFSCallback(factor_func=None,
                                               units_func=None,
                                               verbose=verbose)
+                        ],
+                        validation_data=(test_data, test_labels),
+                        validation_steps=test_data.shape[0] // batch_size,
+                        verbose=verbose
+                    )
+                    model.fit_generator(
+                        generator.flow(train_data, train_labels, **generator_kwargs),
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
+                        callbacks=[
+                            callbacks.LearningRateScheduler(scheduler()),
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
