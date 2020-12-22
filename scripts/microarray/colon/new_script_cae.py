@@ -61,8 +61,8 @@ class ConcreteSelect(layers.Layer):
         discrete_logits = K.one_hot(K.argmax(self.logits), self.logits.shape[1])
 
         self.selections = K.in_train_phase(samples, discrete_logits, training)
-        Y = K.dot(X, K.transpose(self.selections))
-
+        # Y = K.dot(X, K.transpose(self.selections))
+        Y = K.sum(self.selections, axis=0) * X
         return Y
 
     def compute_output_shape(self, input_shape):
@@ -103,10 +103,10 @@ class ConcreteAutoencoderFeatureSelector():
             assert len(val_X) == len(val_Y)
             validation_data = (val_X, val_Y)
 
-        if self.batch_size is None:
-            self.batch_size = max(len(X) // 256, 16)
+        if batch_size is None:
+            batch_size = max(len(X) // 256, 16)
 
-        steps_per_epoch = (len(X) + self.batch_size - 1) // self.batch_size
+        steps_per_epoch = (len(X) + batch_size - 1) // batch_size
 
         for i in range(tryout_limit):
 
@@ -134,7 +134,7 @@ class ConcreteAutoencoderFeatureSelector():
 
             stopper_callback = StopperCallback()
 
-            hist = self.model.fit(X, Y, batch_size, num_epochs, verbose=1, callbacks=[stopper_callback],
+            hist = self.model.fit(X, Y, batch_size, num_epochs, verbose=2, callbacks=[stopper_callback],
                                   validation_data=validation_data)  # , validation_freq = 10)
 
             if K.get_value(
@@ -205,7 +205,8 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, cae_model_func=None, n
         sample_weight[train_y[:, 1] == 0] = class_weight[0]
         class_weight = None
 
-    svc_model = LinearSVC(nfeatures=norm_train_X.shape[1:], **kwargs)
+    # svc_model = LinearSVC(nfeatures=(n_features, ), **kwargs)
+    svc_model = LinearSVC(norm_train_X.shape[1:], **kwargs)
     svc_model.create_keras_model(nclasses=num_classes)
 
     model_clbks = [
@@ -218,7 +219,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, cae_model_func=None, n
 
     if cae_model_func is not None:
         classifier = svc_model.model
-        cae_model = cae_model_func(output_function=classifier, k=n_features)
+        cae_model = cae_model_func(output_function=classifier, K=n_features)
         start_time = time.process_time()
         cae_model.fit(
             norm_train_X, train_y, norm_test_X, test_y, num_epochs=800, batch_size=batch_size,
@@ -323,7 +324,7 @@ def main(dataset_name):
             heatmaps = []
             for r in range(reps):
                 np.random.seed(cont_seed)
-                K.tf.set_random_seed(cont_seed)
+                tf.random.set_seed(cont_seed)
                 cont_seed += 1
 
                 model = train_Keras(
@@ -475,5 +476,6 @@ def main(dataset_name):
 
 
 if __name__ == '__main__':
+    # tf.compat.v1.disable_eager_execution()
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../../../')
     main(dataset_name)
