@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import dexter
+from dataset_reader import colon
 from src.layers import e2efs
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
@@ -29,11 +29,11 @@ k_folds = 3
 k_fold_reps = 20
 fs_reps = 1
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = dexter.Normalize
+normalization_func = colon.Normalize
 
-dataset_name = 'dexter'
+dataset_name = 'colon'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [e2efs.E2EFS]
+e2efs_classes = [e2efs.E2EFSFast]
 
 initial_lr = .01
 
@@ -51,7 +51,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = dexter.load_dataset()
+    dataset = colon.load_dataset()
     return dataset
 
 
@@ -88,8 +88,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:])
         model = e2efs_layer.add_to_model(classifier, input_shape=norm_train_X.shape[1:])
         fs_callbacks.append(
-            clbks.E2EFSCallback(factor_func=None,
-                                units_func=None,
+            clbks.E2EFSCallback(units=10,
                                 verbose=verbose)
         )
     else:

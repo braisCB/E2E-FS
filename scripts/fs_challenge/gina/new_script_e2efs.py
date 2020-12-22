@@ -18,7 +18,6 @@ import time
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-batch_size = 2
 epochs = 150
 extra_epochs = 200
 mu = 100
@@ -35,29 +34,20 @@ dataset_name = 'gina'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
+initial_lr = .01
 
-def scheduler(extra=0, factor=1.):
+
+def scheduler():
     def sch(epoch):
-        if epoch < 50 + extra:
-            return .01 * factor
-        elif epoch < 100 + extra:
-            return .002 * factor
+        if epoch < 50:
+            return initial_lr
+        elif epoch < 100:
+            return .2 * initial_lr
         else:
-            return .0004 * factor
+            return .04 * initial_lr
 
     return sch
 
-
-def fs_scheduler(extra=0, factor=1.):
-    def sch(epoch):
-        if epoch < 1000 + extra:
-            return .01 * factor
-        elif epoch < 2000 + extra:
-            return .002 * factor
-        else:
-            return .0004 * factor
-
-    return sch
 
 def load_dataset():
     dataset = gina.load_dataset()
@@ -75,6 +65,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
     class_weight = train_y.shape[0] / np.sum(train_y, axis=0)
     class_weight = num_classes * class_weight / class_weight.sum()
     sample_weight = None
+    print('mu :', kwargs['mu'], ', batch_size :', batch_size)
     print('reps : ', reps, ', weights : ', class_weight)
     if num_classes == 2:
         sample_weight = np.zeros((len(norm_train_X),))
@@ -89,9 +80,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         callbacks.LearningRateScheduler(scheduler()),
     ]
 
-    fs_callbacks = [
-        callbacks.LearningRateScheduler(fs_scheduler())
-    ]
+    fs_callbacks = []
 
     if e2efs_class is not None:
         classifier = svc_model.model
@@ -106,7 +95,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         model = svc_model.model
         e2efs_layer = None
 
-    optimizer = optimizer_class(e2efs_layer, lr=1e-3)
+    optimizer = optimizer_class(e2efs_layer, lr=initial_lr)
 
     model.compile(
         loss=LinearSVC.loss_function(loss_function, class_weight),
@@ -163,7 +152,6 @@ def main(dataset_name):
 
     for e2efs_class in e2efs_classes:
         print('E2EFS-Method : ', e2efs_class.__name__)
-        seeds = np.arange(1000).astype(int)
         cont_seed = 0
 
         nfeats = []
@@ -201,7 +189,7 @@ def main(dataset_name):
                 'kernel': kernel,
                 'degree': 3
             }
-            print('mu :', model_kwargs['mu'], ', batch_size :', batch_size)
+
 
             svc_kwargs = {
                 'C': 1.0,
