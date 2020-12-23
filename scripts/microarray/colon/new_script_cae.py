@@ -324,7 +324,7 @@ def main(dataset_name):
             heatmaps = []
             for r in range(reps):
                 np.random.seed(cont_seed)
-                tf.random.set_seed(cont_seed)
+                K.tf.set_random_seed(cont_seed)
                 cont_seed += 1
 
                 model = train_Keras(
