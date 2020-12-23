@@ -13,7 +13,10 @@ from keras import backend as K
 from src import callbacks as clbks
 import time
 import tensorflow as tf
-
+from keras.backend.tensorflow_backend import set_session
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.2
+set_session(tf.Session(config=config))
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
