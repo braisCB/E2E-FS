@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import dexter
+from dataset_reader import leukemia
 from src.layers import e2efs
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
@@ -29,9 +29,9 @@ k_folds = 3
 k_fold_reps = 20
 fs_reps = 1
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = dexter.Normalize
+normalization_func = leukemia.Normalize
 
-dataset_name = 'dexter'
+dataset_name = 'leukemia'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 e2efs_classes = [e2efs.E2EFSFast]
 
@@ -51,7 +51,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = dexter.load_dataset()
+    dataset = leukemia.load_dataset()
     return dataset
 
 
