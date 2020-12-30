@@ -25,7 +25,7 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 network_names = ['wrn164', ]
-e2efs_classes = [e2efs.E2EFSFast]
+e2efs_classes = [e2efs.E2EFSRanking]
 
 
 def scheduler(extra=0, factor=.1):

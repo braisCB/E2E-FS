@@ -33,7 +33,7 @@ normalization_func = dexter.Normalize
 
 dataset_name = 'dexter'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [e2efs.E2EFSFast]
+e2efs_classes = [e2efs.E2EFSRanking]
 
 initial_lr = .01
 

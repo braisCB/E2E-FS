@@ -199,7 +199,7 @@ class E2EFS(E2EFSSoft):
                                     **kwargs)
 
 
-class E2EFSFast(E2EFS_Base):
+class E2EFSRanking(E2EFS_Base):
 
     def __init__(self, units,
                  dropout=.0,
@@ -219,7 +219,7 @@ class E2EFSFast(E2EFS_Base):
         self.start_alpha = start_alpha
         self.cont_T = 0
         self.speedup = speedup
-        super(E2EFSFast, self).__init__(units=units,
+        super(E2EFSRanking, self).__init__(units=units,
                                         kernel_regularizer=kernel_regularizer,
                                         kernel_initializer=kernel_initializer,
                                         heatmap_momentum= (T - 1.) / T,
@@ -282,7 +282,7 @@ class E2EFSFast(E2EFS_Base):
         # self.kernel_regularizer = lambda x: regularizers.l2(.01)(K.relu(x))
         # self.kernel_initializer = initializers.constant(max(.05, self.units / np.prod(input_shape[1:])))
 
-        super(E2EFSFast, self).build(input_shape)
+        super(E2EFSRanking, self).build(input_shape)
 
         def regularization(x):
             l_units = loss_units(x)
@@ -297,7 +297,7 @@ class E2EFSFast(E2EFS_Base):
         self.regularization_loss = regularization(self.kernel)
 
     def _get_update_list(self, kernel):
-        update_list = super(E2EFSFast, self)._get_update_list(kernel)
+        update_list = super(E2EFSRanking, self)._get_update_list(kernel)
         update_list += [
             (self.moving_factor, K.switch(K.less_equal(self.moving_T, self.warmup_T),
                                           self.start_alpha,
