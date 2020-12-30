@@ -294,7 +294,7 @@ def main(dataset_name):
                     svc_BAs[i] += n_svc_BAs
                     svc_mAPs[i] += n_svc_mAPs
 
-        output_filename = directory + 'LinearSVC_' + kernel + '_' + e2efs_class.__name__ + '_fast.json'
+        output_filename = directory + 'LinearSVC_' + kernel + '_' + e2efs_class.__name__ + '.json'
 
         if not os.path.isdir(directory):
             os.makedirs(directory)

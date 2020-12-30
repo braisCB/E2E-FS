@@ -1,5 +1,5 @@
 from keras.utils import to_categorical
-from keras import callbacks, regularizers
+from keras import callbacks, initializers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
 from keras.datasets import cifar100
@@ -12,6 +12,7 @@ from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from keras import backend as K
 import tensorflow as tf
+import time
 
 
 batch_size = 128
@@ -22,16 +23,16 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
-e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
+e2efs_classes = [e2efs.E2EFSSoft]
 
 
 def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < 30 + extra:
+        if epoch < 20 + extra:
             return .1 * factor
-        elif epoch < 50 + extra:
+        elif epoch < 40 + extra:
             return .02 * factor
-        elif epoch < 70 + extra:
+        elif epoch < 50 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -40,11 +41,17 @@ def scheduler(extra=0, factor=1.):
 
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = cifar100.load_data()
-    generator = ImageDataGenerator(
-        horizontal_flip=True,
-        height_shift_range=5./32.,
+    fs_generator = ImageDataGenerator(
         width_shift_range=5./32.,
-        fill_mode='reflect'
+        height_shift_range=5./32.,
+        fill_mode='reflect',
+        horizontal_flip=True,
+    )
+    generator = ImageDataGenerator(
+        width_shift_range=5. / 32.,
+        height_shift_range=5. / 32.,
+        fill_mode='reflect',
+        horizontal_flip=True,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -59,7 +66,8 @@ def load_dataset():
             'data': x_test,
             'label': y_test
         },
-        'generator': generator
+        'generator': generator,
+        'fs_generator': fs_generator
     }
     return output
 
@@ -74,6 +82,8 @@ def main():
         train_labels = dataset['train']['label']
         num_classes = len(np.unique(train_labels))
 
+        mask = (np.std(train_data, axis=0) > 1e-3).astype(int).flatten()
+
         test_data = np.asarray(dataset['test']['data'])
         test_labels = dataset['test']['label']
 
@@ -81,6 +91,7 @@ def main():
         test_labels = to_categorical(test_labels, num_classes=num_classes)
 
         generator = dataset['generator']
+        fs_generator = dataset['fs_generator']
         generator_kwargs = {
             'batch_size': batch_size
         }
@@ -121,6 +132,7 @@ def main():
         for e2efs_class in e2efs_classes:
             nfeats = []
             accuracies = []
+            times = []
 
             cont_seed = 0
 
@@ -128,6 +140,7 @@ def main():
                 n_features = int(total_features * factor)
                 n_accuracies = []
                 n_heatmaps = []
+                n_times = []
 
                 for r in range(reps):
                     print('factor : ', factor, ' , rep : ', r)
@@ -135,7 +148,7 @@ def main():
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
                     classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:])
+                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], kernel_initializer=initializers.constant(mask))
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
                     optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
@@ -143,8 +156,9 @@ def main():
                     model.fs_layer = e2efs_layer
                     model.classifier = classifier
                     model.summary()
+                    start_time = time.time()
                     model.fit_generator(
-                        generator.flow(train_data, train_labels, **generator_kwargs),
+                        fs_generator.flow(train_data, train_labels, **generator_kwargs),
                         steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                         callbacks=[
                             E2EFSCallback(factor_func=None,
@@ -155,15 +169,12 @@ def main():
                         validation_steps=test_data.shape[0] // batch_size,
                         verbose=verbose
                     )
+                    n_times.append(time.time() - start_time)
                     model.fit_generator(
                         generator.flow(train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=60,
                         callbacks=[
                             callbacks.LearningRateScheduler(scheduler()),
-                            E2EFSCallback(factor_func=None,
-                                          units_func=None,
-                                          verbose=verbose,
-                                          early_stop=False)
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
@@ -174,10 +185,11 @@ def main():
                     del model
                     K.clear_session()
                 print(
-                    'n_features : ', n_features, ', acc : ', n_accuracies
+                    'n_features : ', n_features, ', acc : ', n_accuracies, ', time : ', n_times
                 )
                 accuracies.append(n_accuracies)
                 nfeats.append(n_features)
+                times.append(n_times)
 
             output_filename = directory + network_name + '_' + e2efs_class.__name__ + \
                               '_e2efs_results_warming_' + str(warming_up) + '.json'
@@ -197,7 +209,8 @@ def main():
                     'reps': reps,
                     'classification': {
                         'n_features': nfeats,
-                        'accuracy': accuracies
+                        'accuracy': accuracies,
+                        'times': times
                     }
                 }
             )

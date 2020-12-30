@@ -84,7 +84,7 @@ class E2EFSSoft(E2EFS_Base):
 
     def __init__(self, units,
                  dropout=.0,
-                 decay_factor=.5,
+                 decay_factor=.75,
                  kernel_regularizer=None,
                  kernel_initializer='ones',
                  T=10000,
@@ -205,8 +205,8 @@ class E2EFSRanking(E2EFS_Base):
                  dropout=.0,
                  kernel_regularizer=None,
                  kernel_initializer='ones',
-                 T=100000,
-                 warmup_T=0,
+                 T=20000,
+                 warmup_T=2000,
                  start_alpha=.0,
                  speedup=3.,
                  **kwargs):
