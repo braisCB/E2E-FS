@@ -44,11 +44,14 @@ def load_dataset():
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = np.expand_dims(x_train, axis=-1)
     x_test = np.expand_dims(x_test, axis=-1)
-    generator_fs = ImageDataGenerator()
+    generator_fs = ImageDataGenerator(
+        horizontal_flip=True,
+    )
     generator = ImageDataGenerator(
         width_shift_range=4.,
         height_shift_range=4.,
         fill_mode='reflect',
+        horizontal_flip=True,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -178,7 +181,7 @@ def main():
                     np.random.seed(cont_seed)
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
-                    model = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
+                    model = load_model(model_filename) if False else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
                     optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 

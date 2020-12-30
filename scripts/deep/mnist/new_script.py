@@ -17,20 +17,20 @@ import time
 
 batch_size = 128
 regularization = 5e-4
-reps = 10
+reps = 5
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
-e2efs_classes = [e2efs.E2EFS]
+e2efs_classes = [e2efs.E2EFSSoft]
 
 
 def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < 10 + extra:
+        if epoch < 20 + extra:
             return .1 * factor
-        elif epoch < 30 + extra:
+        elif epoch < 40 + extra:
             return .02 * factor
         elif epoch < 50 + extra:
             return .004 * factor
@@ -43,7 +43,16 @@ def load_dataset():
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = np.expand_dims(x_train, axis=-1)
     x_test = np.expand_dims(x_test, axis=-1)
+    fs_generator = ImageDataGenerator(
+        # width_shift_range=2./28.,
+        # height_shift_range=2./28.,
+        # fill_mode='reflect',
+        # horizontal_flip=True,
+    )
     generator = ImageDataGenerator(
+        width_shift_range=1./28.,
+        height_shift_range=1./28.,
+        fill_mode='reflect',
         # horizontal_flip=True,
     )
     y_train = np.reshape(y_train, [-1, 1])
@@ -59,7 +68,8 @@ def load_dataset():
             'data': x_test,
             'label': y_test
         },
-        'generator': generator
+        'generator': generator,
+        'fs_generator': fs_generator
     }
     return output
 
@@ -74,7 +84,7 @@ def main():
         train_labels = dataset['train']['label']
         num_classes = len(np.unique(train_labels))
 
-        mask = (np.std(train_data, axis=0) > 5e-3).astype(int).flatten()
+        mask = (np.std(train_data, axis=0) > 1e-3).astype(int).flatten()
 
         test_data = np.asarray(dataset['test']['data'])
         test_labels = dataset['test']['label']
@@ -83,6 +93,7 @@ def main():
         test_labels = to_categorical(test_labels, num_classes=num_classes)
 
         generator = dataset['generator']
+        fs_generator = dataset['fs_generator']
         generator_kwargs = {
             'batch_size': batch_size
         }
@@ -149,7 +160,7 @@ def main():
                     model.summary()
                     start_time = time.time()
                     model.fit_generator(
-                        generator.flow(train_data, train_labels, **generator_kwargs),
+                        fs_generator.flow(train_data, train_labels, **generator_kwargs),
                         steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                         callbacks=[
                             E2EFSCallback(factor_func=None,

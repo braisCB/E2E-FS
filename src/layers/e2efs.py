@@ -87,7 +87,7 @@ class E2EFSSoft(E2EFS_Base):
                  decay_factor=.5,
                  kernel_regularizer=None,
                  kernel_initializer='ones',
-                 T=50000,
+                 T=10000,
                  warmup_T=2000,
                  start_alpha=.0,
                  **kwargs):
@@ -195,7 +195,7 @@ class E2EFS(E2EFSSoft):
                                     kernel_regularizer=None,
                                     decay_factor=0.,
                                     kernel_initializer=kernel_initializer,
-                                    T=50000,
+                                    T=10000,
                                     **kwargs)
 
 
