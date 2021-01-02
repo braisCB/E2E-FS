@@ -187,7 +187,7 @@ class E2EFS_Adam(optimizers.Adam):
         self.weights = [self.iterations] + ms + vs + vhats
 
         for i, (p, g, m, v, vhat) in enumerate(zip(params, grads, ms, vs, vhats)):
-            beta_1 = 0. if i == -1 and self.e2efs_layer is not None and not self.lr_momentum else self.beta_1
+            beta_1 = 0.5 if i == 0 and self.e2efs_layer is not None and not self.lr_momentum else self.beta_1
             beta_2 = 0. if i == -1 and self.e2efs_layer is not None and not self.lr_momentum else self.beta_2
             m_t = (beta_1 * m) + (1. - beta_1) * g
             v_t = (beta_2 * v) + (1. - beta_2) * K.square(g)
