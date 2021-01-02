@@ -44,14 +44,14 @@ def load_dataset():
     x_train = np.expand_dims(x_train, axis=-1)
     x_test = np.expand_dims(x_test, axis=-1)
     fs_generator = ImageDataGenerator(
-        # width_shift_range=2./28.,
-        # height_shift_range=2./28.,
+        # width_shift_range=4./28.,
+        # height_shift_range=4./28.,
         # fill_mode='reflect',
         horizontal_flip=True,
     )
     generator = ImageDataGenerator(
-        # width_shift_range=1./28.,
-        # height_shift_range=1./28.,
+        # width_shift_range=4./28.,
+        # height_shift_range=4./28.,
         # fill_mode='reflect',
         horizontal_flip=True,
     )
