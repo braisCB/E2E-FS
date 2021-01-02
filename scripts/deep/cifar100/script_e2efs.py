@@ -1,5 +1,5 @@
 from keras.utils import to_categorical
-from keras import callbacks, initializers, optimizers
+from keras import callbacks, initializers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
 from keras.datasets import cifar100
@@ -17,24 +17,22 @@ import time
 
 batch_size = 128
 regularization = 5e-4
-fs_reps = 1
 reps = 5
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 network_names = ['wrn164', ]
-e2efs_classes = [e2efs.E2EFSRanking]
+e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < 30 + extra:
+        if epoch < 20 + extra:
             return .1 * factor
-        elif epoch < 50 + extra:
+        elif epoch < 40 + extra:
             return .02 * factor
-        elif epoch < 70 + extra:
+        elif epoch < 50 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -43,17 +41,17 @@ def scheduler(extra=0, factor=.1):
 
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = cifar100.load_data()
-    generator_fs = ImageDataGenerator(
+    fs_generator = ImageDataGenerator(
         width_shift_range=5./32.,
         height_shift_range=5./32.,
         fill_mode='reflect',
         horizontal_flip=True,
     )
     generator = ImageDataGenerator(
-        width_shift_range=5./32.,
-        height_shift_range=5./32.,
+        width_shift_range=5. / 32.,
+        height_shift_range=5. / 32.,
         fill_mode='reflect',
-        horizontal_flip=True
+        horizontal_flip=True,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -69,7 +67,7 @@ def load_dataset():
             'label': y_test
         },
         'generator': generator,
-        'generator_fs': generator_fs
+        'fs_generator': fs_generator
     }
     return output
 
@@ -84,7 +82,7 @@ def main():
         train_labels = dataset['train']['label']
         num_classes = len(np.unique(train_labels))
 
-        # mask = (np.std(train_data, axis=0) > 5e-3).astype(int).flatten()
+        mask = (np.std(train_data, axis=0) > 1e-3).astype(int).flatten()
 
         test_data = np.asarray(dataset['test']['data'])
         test_labels = dataset['test']['label']
@@ -93,7 +91,7 @@ def main():
         test_labels = to_categorical(test_labels, num_classes=num_classes)
 
         generator = dataset['generator']
-        generator_fs = dataset['generator_fs']
+        fs_generator = dataset['fs_generator']
         generator_kwargs = {
             'batch_size': batch_size
         }
@@ -118,9 +116,9 @@ def main():
             print('training_model')
             model.fit_generator(
                 generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
+                steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
                 callbacks=[
-                    callbacks.LearningRateScheduler(scheduler(factor=1.))
+                    callbacks.LearningRateScheduler(scheduler())
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
@@ -137,86 +135,61 @@ def main():
             times = []
 
             cont_seed = 0
-            for r in range(reps):
-                temp_filename = temp_directory + network_name + '_' + e2efs_class.__name__ + \
-                              '_e2efs_heatmap_iter_' + str(r) + '.npy'
-                if os.path.exists(temp_filename):
-                    heatmap = np.load(temp_filename)
-                else:
-                    heatmap = np.zeros(np.prod(train_data.shape[1:]))
-                    start_time = time.time()
-                    for fs_r in range(fs_reps):
-                        print('rep : ', fs_r)
-                        np.random.seed(cont_seed)
-                        tf.set_random_seed(cont_seed)
-                        cont_seed += 1
-                        classifier = load_model(model_filename) if False else getattr(network_models, network_name)(
-                            input_shape=train_data.shape[1:], **model_kwargs)
-                        e2efs_layer = e2efs_class(int(total_features * 0.05), input_shape=train_data.shape[1:],)
-                                                  # kernel_initializer=initializers.constant(mask))
-                        model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                        optimizer = custom_optimizers.E2EFS_Adam(e2efs_layer=e2efs_layer, lr=1e-2)  # optimizers.adam(lr=1e-2)
-                        model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
-                        model.fs_layer = e2efs_layer
-                        model.classifier = classifier
-                        model.summary()
+            for factor in [.05, .1, .25, .5]:
+                n_features = int(total_features * factor)
+                n_accuracies = []
+                n_heatmaps = []
+                n_times = []
 
-                        model.fit_generator(
-                            generator_fs.flow(train_data, train_labels, **generator_kwargs),
-                            steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
-                            callbacks=[
-                                E2EFSCallback(units=int(total_features * 0.05),
-                                              verbose=verbose)
-                            ],
-                            validation_data=(test_data, test_labels),
-                            validation_steps=test_data.shape[0] // batch_size,
-                            verbose=verbose
-                        )
-                        heatmap += K.eval(model.heatmap)
-                        del model
-                        K.clear_session()
-                    if not os.path.isdir(temp_directory):
-                        os.makedirs(temp_directory)
-                    np.save(temp_filename, heatmap)
-                    times.append(time.time() - start_time)
-                fs_rank = np.argsort(heatmap)[::-1]
-
-
-                for i, factor in enumerate([.05, .1, .25, .5]):
+                for r in range(reps):
                     print('factor : ', factor, ' , rep : ', r)
-                    n_features = int(total_features * factor)
-                    mask = np.zeros(train_data.shape[1:])
-                    mask.flat[fs_rank[:n_features]] = 1.
-
                     np.random.seed(cont_seed)
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
-                    model = load_model(model_filename) if False else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    optimizer = optimizers.Adam(lr=1e-2)  # optimizers.adam(lr=1e-2)
-                    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
+                    classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
+                    e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], kernel_initializer=initializers.constant(mask))
+                    model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
+                    optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
+                    model.fs_layer = e2efs_layer
+                    model.classifier = classifier
+                    model.summary()
+                    start_time = time.time()
                     model.fit_generator(
-                        generator.flow(mask * train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=70,
+                        fs_generator.flow(train_data, train_labels, **generator_kwargs),
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                         callbacks=[
-                            callbacks.LearningRateScheduler(scheduler()),
+                            E2EFSCallback(factor_func=None,
+                                              units_func=None,
+                                              verbose=verbose)
                         ],
-                        validation_data=(mask * test_data, test_labels),
+                        validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
                         verbose=verbose
                     )
-                    acc = model.evaluate(mask * test_data, test_labels, verbose=0)[-1]
-                    if i < len(accuracies):
-                        accuracies[i].append(acc)
-                    else:
-                        accuracies.append([acc])
-                        nfeats.append(n_features)
+                    n_times.append(time.time() - start_time)
+                    model.fit_generator(
+                        generator.flow(train_data, train_labels, **generator_kwargs),
+                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=60,
+                        callbacks=[
+                            callbacks.LearningRateScheduler(scheduler()),
+                        ],
+                        validation_data=(test_data, test_labels),
+                        validation_steps=test_data.shape[0] // batch_size,
+                        verbose=verbose
+                    )
+                    n_heatmaps.append(K.eval(model.heatmap).tolist())
+                    n_accuracies.append(model.evaluate(test_data, test_labels, verbose=0)[-1])
                     del model
                     K.clear_session()
-                    print(
-                        'n_features : ', n_features, ', acc : ', acc, ', time : ', times[-1]
-                    )
+                print(
+                    'n_features : ', n_features, ', acc : ', n_accuracies, ', time : ', n_times
+                )
+                accuracies.append(n_accuracies)
+                nfeats.append(n_features)
+                times.append(n_times)
 
             output_filename = directory + network_name + '_' + e2efs_class.__name__ + \
                               '_e2efs_results_warming_' + str(warming_up) + '.json'

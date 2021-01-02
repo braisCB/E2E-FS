@@ -1,6 +1,5 @@
 from keras.utils import to_categorical
 from keras import callbacks, regularizers, layers, models, optimizers
-from src import optimizers as custom_optimizers
 from keras.models import load_model
 from keras.datasets import cifar100
 from src.wrn import network_models
@@ -8,7 +7,6 @@ import json
 import numpy as np
 import os
 from keras.preprocessing.image import ImageDataGenerator
-from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from keras import backend as K
 import tensorflow as tf
@@ -16,9 +14,9 @@ import tensorflow as tf
 
 batch_size = 128
 regularization = 5e-4
-reps = 1
+reps = 5
 verbose = 2
-warming_up = False
+warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
@@ -109,14 +107,13 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-
 def scheduler(extra=0, factor=1.):
     def sch(epoch):
-        if epoch < 30 + extra:
+        if epoch < 60 + extra:
             return .1 * factor
-        elif epoch < 60 + extra:
+        elif epoch < 80 + extra:
             return .02 * factor
-        elif epoch < 90 + extra:
+        elif epoch < 100 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -204,18 +201,19 @@ def main():
         for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
             nfeats = []
             accuracies = []
+            model_accuracies = []
 
             for factor in [.05, .1, .25, .5]:
                 n_features = int(total_features * factor)
                 n_accuracies = []
-                n_heatmaps = []
+                n_model_accuracies = []
 
                 for r in range(reps):
                     print('factor : ', factor, ' , rep : ', r)
                     l2x_model = get_l2x_model(train_data.shape[1:], n_features)
                     classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-
-                    output = classifier(l2x_model.output)
+                    classifier_input = layers.Multiply()([l2x_model.input, l2x_model.output])
+                    output = classifier(classifier_input)
                     model = models.Model(l2x_model.input, output)
 
                     optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
@@ -232,6 +230,7 @@ def main():
                         validation_steps=test_data.shape[0] // batch_size,
                         verbose=verbose
                     )
+                    n_model_accuracies.append(classifier.evaluate(test_data, test_labels, verbose=0)[-1])
                     scores = l2x_model.predict(train_data, verbose=0, batch_size=batch_size).reshape((-1, np.prod(train_data.shape[1:]))).sum(axis=0)
                     pos = np.argsort(scores)[::-1][:n_features]
                     mask = np.zeros_like(scores)
@@ -252,13 +251,14 @@ def main():
                         verbose=verbose
                     )
 
-                    n_accuracies.append(classifier.evaluate(test_data, test_labels, verbose=0)[-1])
+                    n_accuracies.append(classifier.evaluate(mask * test_data, test_labels, verbose=0)[-1])
                     del classifier
                     K.clear_session()
                 print(
                     'n_features : ', n_features, ', acc : ', n_accuracies
                 )
                 accuracies.append(n_accuracies)
+                model_accuracies.append(n_model_accuracies)
                 nfeats.append(n_features)
 
             output_filename = directory + network_name + '_' + e2efs_class.__name__ + \
@@ -279,7 +279,8 @@ def main():
                     'reps': reps,
                     'classification': {
                         'n_features': nfeats,
-                        'accuracy': accuracies
+                        'accuracy': accuracies,
+                        'model_accuracy': model_accuracies
                     }
                 }
             )
