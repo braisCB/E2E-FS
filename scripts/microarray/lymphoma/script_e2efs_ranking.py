@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import leukemia
+from dataset_reader import lymphoma
 from src.layers import e2efs
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
@@ -27,12 +27,13 @@ verbose = 0
 loss_function = 'square_hinge'
 k_folds = 3
 k_fold_reps = 20
+fs_reps = 1
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = leukemia.Normalize
+normalization_func = lymphoma.Normalize
 
-dataset_name = 'leukemia'
+dataset_name = 'lymphoma'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
+e2efs_classes = [e2efs.E2EFSRanking]
 
 initial_lr = .01
 
@@ -50,11 +51,11 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = leukemia.load_dataset()
+    dataset = lymphoma.load_dataset()
     return dataset
 
 
-def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, epochs=150):
+def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_features=None, epochs=150, fine_tuning=True):
     normalization = normalization_func()
     num_classes = train_y.shape[-1]
 
@@ -87,8 +88,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         e2efs_layer = e2efs_class(n_features, input_shape=norm_train_X.shape[1:])
         model = e2efs_layer.add_to_model(classifier, input_shape=norm_train_X.shape[1:])
         fs_callbacks.append(
-            clbks.E2EFSCallback(factor_func=None,
-                                units_func=None,
+            clbks.E2EFSCallback(units=10,
                                 verbose=verbose)
         )
     else:
@@ -119,15 +119,16 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         )
         model.fs_time = time.process_time() - start_time
 
-    model.fit(
-        norm_train_X, train_y, batch_size=batch_size,
-        epochs=epochs,
-        callbacks=model_clbks,
-        validation_data=(norm_test_X, test_y),
-        class_weight=class_weight,
-        sample_weight=sample_weight,
-        verbose=verbose
-    )
+    if fine_tuning:
+        model.fit(
+            norm_train_X, train_y, batch_size=batch_size,
+            epochs=epochs,
+            callbacks=model_clbks,
+            validation_data=(norm_test_X, test_y),
+            class_weight=class_weight,
+            sample_weight=sample_weight,
+            verbose=verbose
+        )
 
     model.normalization = normalization
 
@@ -156,15 +157,12 @@ def main(dataset_name):
 
         nfeats = []
         accuracies = []
-        model_accuracies = []
         svc_accuracies = []
         fs_time = []
         BAs = []
         svc_BAs = []
-        model_BAs = []
         mAPs = []
         svc_mAPs = []
-        model_mAPs = []
         mus = []
         name = dataset_name + '_' + kernel + '_mu_' + str(mu)
         print(name)
@@ -190,56 +188,37 @@ def main(dataset_name):
                 'degree': 3
             }
 
-
             svc_kwargs = {
                 'C': 1.0,
                 'solver': 0.
             }
 
+            n_time = []
+            heatmap = np.zeros(train_data.shape[1:])
+            for r in range(fs_reps):
+                model = train_Keras(
+                    train_data, train_labels, test_data, test_labels, model_kwargs,
+                    e2efs_class=e2efs_class, n_features=1, fine_tuning=False
+                )
+                n_time.append(model.fs_time)
+                heatmap += K.eval(model.heatmap)
+                del model
+                K.clear_session()
+            fs_rank = np.argsort(heatmap)[::-1]
+            fs_time.append(n_time)
+
             for i, n_features in enumerate([10, 50, 100, 150, 200]):
                 n_accuracies = []
                 n_svc_accuracies = []
-                n_model_accuracies = []
                 n_BAs = []
                 n_svc_BAs = []
-                n_model_BAs = []
                 n_mAPs = []
                 n_svc_mAPs = []
-                n_model_mAPs = []
                 n_train_accuracies = []
-                n_time = []
+
                 print('n_features : ', n_features)
 
-                heatmaps = []
-                for r in range(reps):
-                    np.random.seed(cont_seed)
-                    K.tf.set_random_seed(cont_seed)
-                    cont_seed += 1
-
-                    model = train_Keras(
-                        train_data, train_labels, test_data, test_labels, model_kwargs,
-                        e2efs_class=e2efs_class, n_features=n_features,
-                    )
-                    heatmaps.append(K.eval(model.heatmap))
-                    n_time.append(model.fs_time)
-                    test_data_norm = model.normalization.transform(test_data)
-                    train_data_norm = model.normalization.transform(train_data)
-                    test_pred = model.predict(test_data_norm)
-                    n_model_accuracies.append(model.evaluate(test_data_norm, test_labels, verbose=0)[-1])
-                    n_model_BAs.append(balance_accuracy(test_labels, test_pred))
-                    n_model_mAPs.append(average_precision_score(test_labels[:, -1], test_pred))
-                    train_acc = model.evaluate(train_data_norm, train_labels, verbose=0)[-1]
-                    print('n_features : ', n_features,
-                          ', accuracy : ', n_model_accuracies[-1],
-                          ', BA : ', n_model_BAs[-1],
-                          ', mAP : ', n_model_mAPs[-1],
-                          ', train_accuracy : ', train_acc,
-                          ', time : ', n_time[-1], 's')
-                    del model
-                    K.clear_session()
-
-                heatmap = np.mean(heatmaps, axis=0)
-                best_features = np.argsort(heatmap)[::-1][:n_features]
+                best_features = fs_rank[:n_features]
 
                 svc_train_data = train_data[:, best_features]
                 svc_test_data = test_data[:, best_features]
@@ -301,27 +280,19 @@ def main(dataset_name):
                 if i >= len(accuracies):
                     accuracies.append(n_accuracies)
                     svc_accuracies.append(n_svc_accuracies)
-                    model_accuracies.append(n_model_accuracies)
                     BAs.append(n_BAs)
                     mAPs.append(n_mAPs)
-                    fs_time.append(n_time)
                     svc_BAs.append(n_svc_BAs)
                     svc_mAPs.append(n_svc_mAPs)
-                    model_BAs.append(n_model_BAs)
-                    model_mAPs.append(n_model_mAPs)
                     nfeats.append(n_features)
                     mus.append(model_kwargs['mu'])
                 else:
                     accuracies[i] += n_accuracies
                     svc_accuracies[i] += n_svc_accuracies
-                    model_accuracies[i] += n_model_accuracies
-                    fs_time[i] += n_time
                     BAs[i] += n_BAs
                     mAPs[i] += n_mAPs
                     svc_BAs[i] += n_svc_BAs
                     svc_mAPs[i] += n_svc_mAPs
-                    model_BAs[i] += n_model_BAs
-                    model_mAPs[i] += n_model_mAPs
 
         output_filename = directory + 'LinearSVC_' + kernel + '_' + e2efs_class.__name__ + '.json'
 
@@ -338,8 +309,6 @@ def main(dataset_name):
                 'mean_accuracy': np.array(accuracies).mean(axis=1).tolist(),
                 'svc_accuracy': svc_accuracies,
                 'mean_svc_accuracy': np.array(svc_accuracies).mean(axis=1).tolist(),
-                'model_accuracy': model_accuracies,
-                'mean_model_accuracy': np.array(model_accuracies).mean(axis=1).tolist(),
                 'BA': BAs,
                 'mean_BA': np.array(BAs).mean(axis=1).tolist(),
                 'mAP': mAPs,
@@ -348,10 +317,6 @@ def main(dataset_name):
                 'svc_mean_BA': np.array(svc_BAs).mean(axis=1).tolist(),
                 'svc_mAP': svc_mAPs,
                 'svc_mean_mAP': np.array(svc_mAPs).mean(axis=1).tolist(),
-                'model_BA': model_BAs,
-                'model_mean_BA': np.array(model_BAs).mean(axis=1).tolist(),
-                'model_mAP': model_mAPs,
-                'model_mean_mAP': np.array(model_mAPs).mean(axis=1).tolist(),
                 'fs_time': fs_time
             }
         }

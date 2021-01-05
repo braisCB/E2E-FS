@@ -172,7 +172,7 @@ def main(dataset_name):
                 'regularization': regularization,  # 100. / len(train_data), # regularization
             }
 
-            for i, n_features in enumerate([5, 10, 15, 20]):
+            for i, n_features in enumerate([10, 50, 100, 150, 200]):
                 n_accuracies = []
                 n_model_accuracies = []
                 n_BAs = []
