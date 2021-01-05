@@ -18,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 epochs = 150
 extra_epochs = 200
-regularization = 1e-2
+regularization = 1e-3
 reps = 1
 verbose = 0
 k_folds = 3
@@ -139,7 +139,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, l2x_model_func=None, n
     class_weight = train_y.shape[0] / np.sum(train_y, axis=0)
     class_weight = num_classes * class_weight / class_weight.sum()
     sample_weight = None
-    print('mu :', kwargs['mu'], ', batch_size :', batch_size)
+    print('l2 :', kwargs['regularization'], ', batch_size :', batch_size)
     print('reps : ', reps, ', weights : ', class_weight)
     if num_classes == 2:
         sample_weight = np.zeros((len(norm_train_X),))
@@ -154,7 +154,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, l2x_model_func=None, n
     ]
 
     fs_callbacks = [
-        callbacks.LearningRateScheduler(scheduler()),
+        callbacks.LearningRateScheduler(scheduler(extra_epochs=extra_epochs)),
     ]
 
     if l2x_model_func is not None:
@@ -180,7 +180,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, l2x_model_func=None, n
         start_time = time.process_time()
         model.fit(
             norm_train_X, train_y, batch_size=batch_size,
-            epochs=epochs,
+            epochs=epochs + extra_epochs,
             callbacks=fs_callbacks,
             validation_data=(norm_test_X, test_y),
             class_weight=class_weight,
@@ -223,13 +223,10 @@ def main(dataset_name):
     nfeats = []
     accuracies = []
     model_accuracies = []
-    svc_accuracies = []
     fs_time = []
     BAs = []
-    svc_BAs = []
     model_BAs = []
     mAPs = []
-    svc_mAPs = []
     model_mAPs = []
     name = dataset_name + '_three_layer_nn'
     print(name)
@@ -350,18 +347,12 @@ def main(dataset_name):
             'n_features': nfeats,
             'accuracy': accuracies,
             'mean_accuracy': np.array(accuracies).mean(axis=1).tolist(),
-            'svc_accuracy': svc_accuracies,
-            'mean_svc_accuracy': np.array(svc_accuracies).mean(axis=1).tolist(),
             'model_accuracy': model_accuracies,
             'mean_model_accuracy': np.array(model_accuracies).mean(axis=1).tolist(),
             'BA': BAs,
             'mean_BA': np.array(BAs).mean(axis=1).tolist(),
             'mAP': mAPs,
             'mean_mAP': np.array(mAPs).mean(axis=1).tolist(),
-            'svc_BA': svc_BAs,
-            'svc_mean_BA': np.array(svc_BAs).mean(axis=1).tolist(),
-            'svc_mAP': svc_mAPs,
-            'svc_mean_mAP': np.array(svc_mAPs).mean(axis=1).tolist(),
             'model_BA': model_BAs,
             'model_mean_BA': np.array(model_BAs).mean(axis=1).tolist(),
             'model_mAP': model_mAPs,

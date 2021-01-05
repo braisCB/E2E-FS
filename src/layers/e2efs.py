@@ -208,7 +208,7 @@ class E2EFSRanking(E2EFS_Base):
                  T=20000,
                  warmup_T=2000,
                  start_alpha=.0,
-                 speedup=3.,
+                 speedup=2.,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
