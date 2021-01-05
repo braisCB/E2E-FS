@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import lung181
+from dataset_reader import leukemia
 from src.layers import e2efs
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
@@ -29,9 +29,9 @@ k_folds = 3
 k_fold_reps = 20
 fs_reps = 1
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = lung181.Normalize
+normalization_func = leukemia.Normalize
 
-dataset_name = 'lung181'
+dataset_name = 'leukemia'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 e2efs_classes = [e2efs.E2EFSRanking]
 
@@ -51,7 +51,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = lung181.load_dataset()
+    dataset = leukemia.load_dataset()
     return dataset
 
 
@@ -294,7 +294,7 @@ def main(dataset_name):
                     svc_BAs[i] += n_svc_BAs
                     svc_mAPs[i] += n_svc_mAPs
 
-        output_filename = directory + 'LinearSVC_' + kernel + '_' + e2efs_class.__name__ + '_fast.json'
+        output_filename = directory + 'LinearSVC_' + kernel + '_' + e2efs_class.__name__ + '.json'
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
