@@ -130,7 +130,7 @@ class ConcreteAutoencoderFeatureSelector():
 
             stopper_callback = StopperCallback()
 
-            hist = self.model.fit(X, Y, batch_size, num_epochs, verbose=0, callbacks=[stopper_callback],
+            hist = self.model.fit(X, Y, batch_size, num_epochs, verbose=0, callbacks=[stopper_callback, callbacks.LearningRateScheduler(scheduler(extra_epochs=extra_epochs))],
                                   validation_data=validation_data)  # , validation_freq = 10)
 
             if K.get_value(
@@ -211,7 +211,7 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, cae_model_func=None, n
         cae_model = cae_model_func(output_function=classifier, K=n_features)
         start_time = time.process_time()
         cae_model.fit(
-            norm_train_X, train_y, norm_test_X, test_y, num_epochs=201, batch_size=batch_size,
+            norm_train_X, train_y, norm_test_X, test_y, num_epochs=extra_epochs + epochs, batch_size=batch_size,
             class_weight=class_weight
         )
         model = cae_model.model
@@ -336,7 +336,7 @@ def main(dataset_name):
                 test_data_norm = model.normalization.transform(svc_test_data)
                 test_pred = model.predict(test_data_norm)
                 n_BAs.append(balance_accuracy(test_labels, test_pred))
-                n_mAPs.append(average_precision_score(test_labels[:, -1], test_pred))
+                n_mAPs.append(average_precision_score(test_labels[:, -1], test_pred[:, -1]))
                 n_accuracies.append(model.evaluate(test_data_norm, test_labels, verbose=0)[-1])
                 n_train_accuracies.append(model.evaluate(train_data_norm, train_labels, verbose=0)[-1])
                 del model

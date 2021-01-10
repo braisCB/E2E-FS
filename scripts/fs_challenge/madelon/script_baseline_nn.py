@@ -33,7 +33,7 @@ optimizer_class = keras_optimizers.Adam
 normalization_func = madelon.Normalize
 
 dataset_name = 'madelon'
-directory = os.path.dirname(os.path.realpath(__file__)) + '/info_nn/'
+directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 
 
 def scheduler(extra=0, factor=.1):

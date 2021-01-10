@@ -223,13 +223,10 @@ def main(dataset_name):
     nfeats = []
     accuracies = []
     model_accuracies = []
-    svc_accuracies = []
     fs_time = []
     BAs = []
-    svc_BAs = []
     model_BAs = []
     mAPs = []
-    svc_mAPs = []
     model_mAPs = []
     name = dataset_name + '_three_layer_nn'
     print(name)
@@ -350,18 +347,12 @@ def main(dataset_name):
             'n_features': nfeats,
             'accuracy': accuracies,
             'mean_accuracy': np.array(accuracies).mean(axis=1).tolist(),
-            'svc_accuracy': svc_accuracies,
-            'mean_svc_accuracy': np.array(svc_accuracies).mean(axis=1).tolist(),
             'model_accuracy': model_accuracies,
             'mean_model_accuracy': np.array(model_accuracies).mean(axis=1).tolist(),
             'BA': BAs,
             'mean_BA': np.array(BAs).mean(axis=1).tolist(),
             'mAP': mAPs,
             'mean_mAP': np.array(mAPs).mean(axis=1).tolist(),
-            'svc_BA': svc_BAs,
-            'svc_mean_BA': np.array(svc_BAs).mean(axis=1).tolist(),
-            'svc_mAP': svc_mAPs,
-            'svc_mean_mAP': np.array(svc_mAPs).mean(axis=1).tolist(),
             'model_BA': model_BAs,
             'model_mean_BA': np.array(model_BAs).mean(axis=1).tolist(),
             'model_mAP': model_mAPs,

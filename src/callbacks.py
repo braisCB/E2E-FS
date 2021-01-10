@@ -27,7 +27,7 @@ class E2EFSCallback(Callback):
         layer = self.model.layers[1]
         moving_factor = K.eval(layer.moving_factor) if hasattr(layer, 'moving_factor') else None
         e2efs_kernel = K.eval(layer.e2efs_kernel)
-        if self.verbose > 0 or (e2efs_kernel > 0.).sum() <= layer.units or epoch % 100 == 0:
+        if self.verbose > 0 or (e2efs_kernel > 0.).sum() <= self.units or epoch % 100 == 0:
             print(
                 "Epoch %05d: cost stopping %.6f" % (epoch, logs['loss']),
                 ', moving_factor : ', moving_factor,
@@ -38,6 +38,6 @@ class E2EFSCallback(Callback):
                 ', sum_gamma : ', e2efs_kernel.sum(),
                 ', max_gamma : ', e2efs_kernel.max()
             )
-        if self.early_stop and (e2efs_kernel > 0.).sum() <= max(layer.units, self.units):
+        if self.early_stop and (e2efs_kernel > 0.).sum() <= self.units:
             self.model.stop_training = True
             print('Early stopping')
