@@ -4,7 +4,7 @@ from keras import backend as K
 
 class E2EFSCallback(Callback):
 
-    def __init__(self, factor_func=None, units_func=None, units=0, verbose=0, early_stop=True):
+    def __init__(self, factor_func=None, units_func=None, units=None, verbose=0, early_stop=True):
         super(E2EFSCallback, self).__init__()
         self.factor_func = factor_func
         self.units_func = units_func
@@ -25,6 +25,8 @@ class E2EFSCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         layer = self.model.layers[1]
+        if self.units is None:
+            self.units = layer.units
         moving_factor = K.eval(layer.moving_factor) if hasattr(layer, 'moving_factor') else None
         e2efs_kernel = K.eval(layer.e2efs_kernel)
         if self.verbose > 0 or (e2efs_kernel > 0.).sum() <= self.units or epoch % 100 == 0:
@@ -38,6 +40,7 @@ class E2EFSCallback(Callback):
                 ', sum_gamma : ', e2efs_kernel.sum(),
                 ', max_gamma : ', e2efs_kernel.max()
             )
+
         if self.early_stop and (e2efs_kernel > 0.).sum() <= self.units:
             self.model.stop_training = True
             print('Early stopping')
