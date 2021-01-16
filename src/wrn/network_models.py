@@ -1,8 +1,27 @@
 from keras.models import Model
 from keras import backend as K, optimizers
-from keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D
+from keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D, Flatten
 from keras.regularizers import l2
 from src.wrn.wide_residual_network import wrn_block
+from src.network_models import three_layer_nn as tln
+import numpy as np
+
+
+def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_normal',
+                   dropout=0.0, lasso=0.0, regularization=5e-4, momentum=0.9):
+
+    nfeatures = np.prod(input_shape)
+    tln_model = tln((nfeatures, ), nclasses, bn, kernel_initializer, dropout, lasso, regularization, momentum)
+    ip = Input(shape=input_shape)
+    x = Flatten()(ip)
+    output = tln_model(x)
+    model = Model(ip, output)
+
+    optimizer = optimizers.SGD(lr=1e-1)
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
+
+    return model
+
 
 
 def wrn164(

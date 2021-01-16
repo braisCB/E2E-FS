@@ -2,7 +2,7 @@ from keras.utils import to_categorical
 from keras import callbacks, initializers, optimizers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
-from keras.datasets import fashion_mnist
+from keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
@@ -42,20 +42,20 @@ def scheduler(extra=0, factor=1.):
 
 
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = np.expand_dims(x_train, axis=-1)
     x_test = np.expand_dims(x_test, axis=-1)
     generator_fs = ImageDataGenerator(
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True,
+        # horizontal_flip=True,
     )
     generator = ImageDataGenerator(
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True
+        # horizontal_flip=True
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -101,7 +101,7 @@ def main():
         }
 
         print('reps : ', reps)
-        name = 'fashion_mnist_' + network_name + '_r_' + str(regularization)
+        name = 'mnist_' + network_name + '_r_' + str(regularization)
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
