@@ -2,7 +2,7 @@ from keras.utils import to_categorical
 from keras import callbacks, initializers, optimizers
 from src import optimizers as custom_optimizers
 from keras.models import load_model
-from keras.datasets import cifar10
+from keras.datasets import fashion_mnist
 from src.wrn import network_models
 import json
 import numpy as np
@@ -42,17 +42,19 @@ def scheduler(extra=0, factor=1.):
 
 
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    x_train = np.expand_dims(x_train, axis=-1)
+    x_test = np.expand_dims(x_test, axis=-1)
     generator_fs = ImageDataGenerator(
-        width_shift_range=5./32.,
-        height_shift_range=5./32.,
-        fill_mode='reflect',
+        # width_shift_range=4./28.,
+        # height_shift_range=4./28.,
+        # fill_mode='reflect',
         horizontal_flip=True,
     )
     generator = ImageDataGenerator(
-        width_shift_range=5./32.,
-        height_shift_range=5./32.,
-        fill_mode='reflect',
+        # width_shift_range=4./28.,
+        # height_shift_range=4./28.,
+        # fill_mode='reflect',
         horizontal_flip=True
     )
     y_train = np.reshape(y_train, [-1, 1])
@@ -99,7 +101,7 @@ def main():
         }
 
         print('reps : ', reps)
-        name = 'cifar10_' + network_name + '_r_' + str(regularization)
+        name = 'fashion_mnist_' + network_name + '_r_' + str(regularization)
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
@@ -182,7 +184,7 @@ def main():
                     times.append(time.time() - start_time)
                 fs_rank = np.argsort(heatmap)[::-1]
 
-                for i, factor in enumerate([.25, .5]):
+                for i, factor in enumerate([.05, .1, .25, .5]):
                     print('factor : ', factor, ' , rep : ', r)
                     n_features = int(total_features * factor)
                     mask = np.zeros(train_data.shape[1:])
