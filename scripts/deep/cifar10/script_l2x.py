@@ -10,11 +10,12 @@ from keras.preprocessing.image import ImageDataGenerator
 from src.layers import e2efs
 from keras import backend as K
 import tensorflow as tf
+import time
 
 
 batch_size = 128
 regularization = 5e-4
-reps = 5
+reps = 10
 verbose = 2
 warming_up = True
 
@@ -197,11 +198,13 @@ def main():
         nfeats = []
         accuracies = []
         model_accuracies = []
+        times = []
 
         for factor in [.05, .1, .25, .5]:
             n_features = int(total_features * factor)
             n_accuracies = []
             n_model_accuracies = []
+            n_times = []
 
             for r in range(reps):
                 print('factor : ', factor, ' , rep : ', r)
@@ -215,6 +218,7 @@ def main():
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()
+                start_time = time.time()
                 model.fit_generator(
                     generator.flow(train_data, train_labels, **generator_kwargs),
                     steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
@@ -225,9 +229,10 @@ def main():
                     validation_steps=test_data.shape[0] // batch_size,
                     verbose=verbose
                 )
-                n_model_accuracies.append(classifier.evaluate(test_data, test_labels, verbose=0)[-1])
+                n_model_accuracies.append(model.evaluate(test_data, test_labels, verbose=0)[-1])
                 scores = l2x_model.predict(train_data, verbose=0, batch_size=batch_size).reshape((-1, np.prod(train_data.shape[1:]))).sum(axis=0)
                 pos = np.argsort(scores)[::-1][:n_features]
+                n_times.append(time.time() - start_time)
                 mask = np.zeros_like(scores)
                 mask[pos] = 1.
                 mask = mask.reshape(train_data.shape[1:])
@@ -250,11 +255,12 @@ def main():
                 del classifier
                 K.clear_session()
             print(
-                'n_features : ', n_features, ', acc : ', n_accuracies
+                'n_features : ', n_features, ', acc : ', n_accuracies, ', time : ', n_times
             )
             accuracies.append(n_accuracies)
             model_accuracies.append(n_model_accuracies)
             nfeats.append(n_features)
+            times.append(n_times)
 
         output_filename = directory + network_name + '_l2x_results_warming_' + str(warming_up) + '.json'
 
@@ -274,7 +280,8 @@ def main():
                 'classification': {
                     'n_features': nfeats,
                     'accuracy': accuracies,
-                    'model_accuracy': model_accuracies
+                    'model_accuracy': model_accuracies,
+                    'times': times
                 }
             }
         )

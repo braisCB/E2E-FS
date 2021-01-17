@@ -10,20 +10,17 @@ from keras.preprocessing.image import ImageDataGenerator
 from src.layers import e2efs
 from keras import backend as K
 import tensorflow as tf
+import time
 
 
 batch_size = 128
 regularization = 5e-4
-reps = 5
+reps = 1
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 network_names = ['wrn164', ]
-e2efs_classes = [
-    (e2efs.E2EFSSoft, {'dropout': .1, 'decay_factor': .75}, 250, 80),
-    (e2efs.E2EFS, {'dropout': .1}, 100, 80),
-]
 
 
 def create_rank(scores, k):
@@ -198,95 +195,99 @@ def main():
             del model
             K.clear_session()
 
-        for e2efs_class, e2efs_kwargs, T, extra_epochs in e2efs_classes:
-            nfeats = []
-            accuracies = []
-            model_accuracies = []
+        nfeats = []
+        accuracies = []
+        model_accuracies = []
+        times = []
 
-            for factor in [.05, .1, .25, .5]:
-                n_features = int(total_features * factor)
-                n_accuracies = []
-                n_model_accuracies = []
+        for factor in [.05, .1, .25, .5]:
+            n_features = int(total_features * factor)
+            n_accuracies = []
+            n_model_accuracies = []
+            n_times = []
 
-                for r in range(reps):
-                    print('factor : ', factor, ' , rep : ', r)
-                    l2x_model = get_l2x_model(train_data.shape[1:], n_features)
-                    classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    classifier_input = layers.Multiply()([l2x_model.input, l2x_model.output])
-                    output = classifier(classifier_input)
-                    model = models.Model(l2x_model.input, output)
+            for r in range(reps):
+                print('factor : ', factor, ' , rep : ', r)
+                l2x_model = get_l2x_model(train_data.shape[1:], n_features)
+                classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
+                classifier_input = layers.Multiply()([l2x_model.input, l2x_model.output])
+                output = classifier(classifier_input)
+                model = models.Model(l2x_model.input, output)
 
-                    optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
-                    model.classifier = classifier
-                    model.summary()
-                    model.fit_generator(
-                        generator.flow(train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
-                        callbacks=[
-                            callbacks.LearningRateScheduler(scheduler(extra=0)),
-                        ],
-                        validation_data=(test_data, test_labels),
-                        validation_steps=test_data.shape[0] // batch_size,
-                        verbose=verbose
-                    )
-                    n_model_accuracies.append(classifier.evaluate(test_data, test_labels, verbose=0)[-1])
-                    scores = l2x_model.predict(train_data, verbose=0, batch_size=batch_size).reshape((-1, np.prod(train_data.shape[1:]))).sum(axis=0)
-                    pos = np.argsort(scores)[::-1][:n_features]
-                    mask = np.zeros_like(scores)
-                    mask[pos] = 1.
-                    mask = mask.reshape(train_data.shape[1:])
-                    del l2x_model, classifier, model
-                    K.clear_session()
-                    classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(
-                        input_shape=train_data.shape[1:], **model_kwargs)
-                    classifier.fit_generator(
-                        generator.flow(mask * train_data, train_labels, **generator_kwargs),
-                        steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
-                        callbacks=[
-                            callbacks.LearningRateScheduler(scheduler(extra=0)),
-                        ],
-                        validation_data=(mask * test_data, test_labels),
-                        validation_steps=test_data.shape[0] // batch_size,
-                        verbose=verbose
-                    )
-
-                    n_accuracies.append(classifier.evaluate(mask * test_data, test_labels, verbose=0)[-1])
-                    del classifier
-                    K.clear_session()
-                print(
-                    'n_features : ', n_features, ', acc : ', n_accuracies
+                optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
+                model.classifier = classifier
+                model.summary()
+                start_time = time.time()
+                model.fit_generator(
+                    generator.flow(train_data, train_labels, **generator_kwargs),
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    callbacks=[
+                        callbacks.LearningRateScheduler(scheduler(extra=0)),
+                    ],
+                    validation_data=(test_data, test_labels),
+                    validation_steps=test_data.shape[0] // batch_size,
+                    verbose=verbose
                 )
-                accuracies.append(n_accuracies)
-                model_accuracies.append(n_model_accuracies)
-                nfeats.append(n_features)
+                n_model_accuracies.append(model.evaluate(test_data, test_labels, verbose=0)[-1])
+                scores = l2x_model.predict(train_data, verbose=0, batch_size=batch_size).reshape((-1, np.prod(train_data.shape[1:]))).sum(axis=0)
+                pos = np.argsort(scores)[::-1][:n_features]
+                n_times.append(time.time() - start_time)
+                mask = np.zeros_like(scores)
+                mask[pos] = 1.
+                mask = mask.reshape(train_data.shape[1:])
+                del l2x_model, classifier, model
+                K.clear_session()
+                classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(
+                    input_shape=train_data.shape[1:], **model_kwargs)
+                classifier.fit_generator(
+                    generator.flow(mask * train_data, train_labels, **generator_kwargs),
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    callbacks=[
+                        callbacks.LearningRateScheduler(scheduler(extra=0)),
+                    ],
+                    validation_data=(mask * test_data, test_labels),
+                    validation_steps=test_data.shape[0] // batch_size,
+                    verbose=verbose
+                )
 
-            output_filename = directory + network_name + '_' + e2efs_class.__name__ + \
-                              '_l2x_results_warming_' + str(warming_up) + '.json'
-
-            try:
-                with open(output_filename) as outfile:
-                    info_data = json.load(outfile)
-            except:
-                info_data = {}
-
-            if name not in info_data:
-                info_data[name] = []
-
-            info_data[name].append(
-                {
-                    'regularization': regularization,
-                    'reps': reps,
-                    'classification': {
-                        'n_features': nfeats,
-                        'accuracy': accuracies,
-                        'model_accuracy': model_accuracies
-                    }
-                }
+                n_accuracies.append(classifier.evaluate(mask * test_data, test_labels, verbose=0)[-1])
+                del classifier
+                K.clear_session()
+            print(
+                'n_features : ', n_features, ', acc : ', n_accuracies, ', time : ', n_times
             )
+            accuracies.append(n_accuracies)
+            model_accuracies.append(n_model_accuracies)
+            nfeats.append(n_features)
+            times.append(n_times)
 
-            with open(output_filename, 'w') as outfile:
-                json.dump(info_data, outfile)
+        output_filename = directory + network_name + '_l2x_results_warming_' + str(warming_up) + '.json'
+
+        try:
+            with open(output_filename) as outfile:
+                info_data = json.load(outfile)
+        except:
+            info_data = {}
+
+        if name not in info_data:
+            info_data[name] = []
+
+        info_data[name].append(
+            {
+                'regularization': regularization,
+                'reps': reps,
+                'classification': {
+                    'n_features': nfeats,
+                    'accuracy': accuracies,
+                    'model_accuracy': model_accuracies,
+                    'times': times
+                }
+            }
+        )
+
+        with open(output_filename, 'w') as outfile:
+            json.dump(info_data, outfile)
 
 
 if __name__ == '__main__':
