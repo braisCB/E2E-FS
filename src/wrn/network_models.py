@@ -13,7 +13,9 @@ def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_norm
     nfeatures = np.prod(input_shape)
     tln_model = tln((nfeatures, ), nclasses, bn, kernel_initializer, dropout, lasso, regularization, momentum)
     ip = Input(shape=input_shape)
-    x = Flatten()(ip)
+    x = ip
+    if len(input_shape) > 1:
+        x = Flatten()(x)
     output = tln_model(x)
     model = Model(ip, output)
 
