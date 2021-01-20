@@ -190,7 +190,6 @@ def main(dataset_name):
                 'degree': 3
             }
 
-
             svc_kwargs = {
                 'C': 1.0,
                 'solver': 0.

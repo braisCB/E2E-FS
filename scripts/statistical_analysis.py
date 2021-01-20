@@ -22,12 +22,13 @@ def main(dataset, alpha=.05):
         for key in ['BA', 'svc_BA', 'model_BA']:
             if key not in stats['classification']:
                 continue
-            BA_key = fs_class + '_' + key.split('_')
+            BA_key = fs_class + '_' + key
             BA = np.asarray(stats['classification'][key]).T
-            BA_AUC = (.5 * (BA[:, 1:] + BA[:, :-1]) / (n_features[1:] - n_features[:-1])).sum(axis=-1)
+            BA_AUC = (.5 * (BA[:, 1:] + BA[:, :-1]) * (n_features[1:] - n_features[:-1]) / (n_features[-1] - n_features[0])).sum(axis=-1)
             BA_AUCs[BA_key] = BA_AUC
             print('method : ', fs_class)
-            print('score', key, ' : ', BA.mean(), '+-', BA.std())
+            print('BA', key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
+            print('BA_AUC', key, ' : ', BA_AUC.mean(axis=0), '+-', BA_AUC.std(axis=0))
 
     keys = list(BA_AUCs.keys())
     wilcoxon_matrix = np.zeros((len(keys), len(keys)))
@@ -52,8 +53,9 @@ def main(dataset, alpha=.05):
     best_methods = np.where((min_wilkoxon + 1) * max_wilkoxon > 0)[0]
     print('best methods : ', np.asarray(keys)[best_methods])
 
+
 if __name__ == '__main__':
-    dataset = 'microarray/colon'
+    dataset = 'microarray/lymphoma'
     alpha = .05
 
     main(dataset, alpha)

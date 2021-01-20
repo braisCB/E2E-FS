@@ -19,7 +19,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 epochs = 150
-extra_epochs = 200
+extra_epochs = 600
 mu = 100
 kernel = 'linear'
 reps = 1
