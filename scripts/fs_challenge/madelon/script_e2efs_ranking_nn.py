@@ -73,6 +73,8 @@ def train_Keras(train_X, train_y, test_X, test_y, kwargs, e2efs_class=None, n_fe
         sample_weight[train_y[:, 1] == 0] = class_weight[0]
         class_weight = None
 
+    classifier = three_layer_nn(nfeatures=norm_train_X.shape[1:], **kwargs)
+
     model_clbks = [
         callbacks.LearningRateScheduler(scheduler()),
     ]
@@ -150,7 +152,7 @@ def main(dataset_name):
         fs_time = []
         BAs = []
         mAPs = []
-        name = dataset_name + '_' + kernel
+        name = dataset_name + '_' + kernel + '_r_' + str(regularization)
         print(name)
 
         for j, (train_index, test_index) in enumerate(rskf.split(raw_data, raw_label)):
@@ -198,7 +200,6 @@ def main(dataset_name):
 
                 svc_train_data = train_data[:, best_features]
                 svc_test_data = test_data[:, best_features]
-
 
                 for r in range(reps):
                     np.random.seed(cont_seed)
