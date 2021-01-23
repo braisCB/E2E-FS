@@ -10,30 +10,25 @@ def main(dataset, alpha=.05):
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../')
 
     directory = os.path.dirname(os.path.realpath(__file__)) + '/' + dataset + '/info/'
-    files = glob.glob(directory + 'wrn*.json')
+    files = glob.glob(directory + 'three*.json')
 
     BA_AUCs = {}
     BA_10s = {}
 
     print(os.getcwd())
     for file in files:
-        fs_class = file.split('.')[-2].split('_')[1]
+        fs_class = file.split('.')[-2].split('_')[5]
         with open(file, 'r') as outfile:
             stats = json.load(outfile)
         stats = stats[list(stats.keys())[0]][0]
         n_features = np.asarray(stats['classification']['n_features'])
-        for key in ['accuracy']:
+        for key in ['accuracy', 'times']:
             if key not in stats['classification']:
                 continue
             BA_key = fs_class + '_' + key
             BA = np.asarray(stats['classification'][key]).T
-            BA_AUC = (.5 * (BA[:, 1:] + BA[:, :-1]) * (n_features[1:] - n_features[:-1]) / (n_features[-1] - n_features[0])).sum(axis=-1)
-            BA_AUCs[BA_key] = BA_AUC
-            BA_10s[BA_key] = BA[:, 0]
             print('method : ', fs_class)
-            print('BA', key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
-            print('BA_10', key, ' : ', BA_10s[BA_key].mean(axis=0), '+-', BA_10s[BA_key].std(axis=0))
-            print('BA_AUC', key, ' : ', BA_AUC.mean(axis=0), '+-', BA_AUC.std(axis=0))
+            print(key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
 
 
     for t, BA_dict in enumerate([BA_10s, BA_AUCs]):
@@ -64,7 +59,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'deep/mnist'
+    dataset = 'deep/fashion_mnist'
     alpha = .05
 
     main(dataset, alpha)
