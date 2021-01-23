@@ -20,7 +20,7 @@ fs_methods = [
     # InfFS.InfFS,
     # MIM.MIM,
     # ReliefF.ReliefF,
-    # SVMRFE.SVMRFE
+    SVMRFE.SVMRFE,
     LASSORFE.LASSORFE
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
