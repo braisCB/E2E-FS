@@ -17,7 +17,7 @@ class SVMRFE:
         if self.normalize:
             new_X -= new_X.min(axis=0)
             new_X /= new_X.max(axis=0)
-        estimator = LinearSVC(C=len(X)/100., class_weight='balanced')
+        estimator = LinearSVC(C=1., class_weight='balanced')
         print('nfeatures', self.n_features_to_select)
         self.selector = RFE(estimator, n_features_to_select=self.n_features_to_select, step=self.step).fit(new_X, y)
         self.score = 1. / self.selector.ranking_
