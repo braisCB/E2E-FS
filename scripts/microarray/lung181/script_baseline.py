@@ -14,15 +14,15 @@ from keras import backend as K
 import time
 
 
-fs_methods = [
-    Fisher.Fisher,
-    ILFS.ILFS,
-    InfFS.InfFS,
-    MIM.MIM,
-    ReliefF.ReliefF,
+fs_methods = {
+    # Fisher.Fisher,
+    # ILFS.ILFS,
+    # InfFS.InfFS,
+    # MIM.MIM,
+    # ReliefF.ReliefF,
     SVMRFE.SVMRFE,
-    LASSORFE.LASSORFE
-]
+    # LASSORFE.LASSORFE
+}
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 

@@ -28,7 +28,7 @@ def main(dataset, alpha=.05):
             BA = np.asarray(stats['classification'][key]).T
             BA_AUC = (.5 * (BA[:, 1:] + BA[:, :-1]) * (n_features[1:] - n_features[:-1]) / (n_features[-1] - n_features[0])).sum(axis=-1)
             BA_AUCs[BA_key] = BA_AUC
-            BA_10s[BA_key] = BA[:, 3]
+            BA_10s[BA_key] = BA[:, 0]
             print('method : ', fs_class)
             print('BA', key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
             print('BA_10', key, ' : ', BA_10s[BA_key].mean(axis=0), '+-', BA_10s[BA_key].std(axis=0))
@@ -87,7 +87,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'fs_challenge/madelon'
+    dataset = 'fs_challenge/gisette'
     alpha = .05
 
     main(dataset, alpha)

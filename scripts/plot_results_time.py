@@ -96,6 +96,6 @@ def main(dataset):
 
 
 if __name__ == '__main__':
-    dataset = 'fs_challenge/madelon'
+    dataset = 'fs_challenge/dexter'
     main(dataset)
 
