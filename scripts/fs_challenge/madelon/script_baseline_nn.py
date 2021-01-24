@@ -13,11 +13,11 @@ from keras import backend as K
 
 
 fs_methods = [
-    # ILFS.ILFS,
-    # Fisher.Fisher,
-    # InfFS.InfFS,
-    # MIM.MIM,
-    # ReliefF.ReliefF,
+    ILFS.ILFS,
+    Fisher.Fisher,
+    InfFS.InfFS,
+    MIM.MIM,
+    ReliefF.ReliefF,
     SVMRFE.SVMRFE,
     LASSORFE.LASSORFE
 ]
