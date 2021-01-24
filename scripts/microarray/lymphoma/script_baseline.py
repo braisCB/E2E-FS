@@ -7,7 +7,7 @@ from dataset_reader import lymphoma
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
 from extern.liblinear.python import liblinearutil
-from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF, SVMRFE
+from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF, SVMRFE, LASSORFE
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
 from keras import backend as K
@@ -15,12 +15,13 @@ import time
 
 
 fs_methods = [
-    Fisher.Fisher,
-    ILFS.ILFS,
-    InfFS.InfFS,
-    MIM.MIM,
-    ReliefF.ReliefF,
-    SVMRFE.SVMRFE
+    # Fisher.Fisher,
+    # ILFS.ILFS,
+    # InfFS.InfFS,
+    # MIM.MIM,
+    # ReliefF.ReliefF,
+    # SVMRFE.SVMRFE,
+    LASSORFE.LASSORFE
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -137,7 +138,7 @@ def main(dataset_name):
         svc_mAPs = []
         mus = []
         name = dataset_name + '_mu_' + str(mu)
-        print(name)
+        print(name, 'samples : ', raw_label.sum(), (1. - raw_label).sum())
 
         for j, (train_index, test_index) in enumerate(rskf.split(raw_data, raw_label)):
             print('k_fold', j, 'of', k_folds*k_fold_reps)
@@ -174,13 +175,13 @@ def main(dataset_name):
             if os.path.exists(fs_filename):
                 with open(fs_filename, 'r') as outfile:
                     fs_data = json.load(outfile)
-                fs_class = fs_method(n_features_to_select=200 if fs_method.__name__ != 'SVMRFE' else 10)
+                fs_class = fs_method(n_features_to_select=200 if 'RFE' not in fs_method.__name__ else 10)
                 fs_class.score = np.asarray(fs_data['score'])
                 fs_class.ranking = np.asarray(fs_data['ranking'])
                 fs_time.append(np.NAN)
             else:
                 start_time = time.process_time()
-                fs_class = fs_method(n_features_to_select=200 if fs_method.__name__ != 'SVMRFE' else 10)
+                fs_class = fs_method(n_features_to_select=200 if 'RFE' not in fs_method.__name__ else 10)
                 fs_class.fit(train_data, 2. * train_labels[:, -1] - 1.)
                 fs_data = {
                     'score': fs_class.score.tolist(),
