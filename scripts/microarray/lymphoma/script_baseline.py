@@ -15,12 +15,12 @@ import time
 
 
 fs_methods = [
-    # Fisher.Fisher,
-    # ILFS.ILFS,
-    # InfFS.InfFS,
-    # MIM.MIM,
-    # ReliefF.ReliefF,
-    # SVMRFE.SVMRFE,
+    Fisher.Fisher,
+    ILFS.ILFS,
+    InfFS.InfFS,
+    MIM.MIM,
+    ReliefF.ReliefF,
+    SVMRFE.SVMRFE,
     LASSORFE.LASSORFE
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

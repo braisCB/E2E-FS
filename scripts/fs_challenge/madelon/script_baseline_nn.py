@@ -6,7 +6,7 @@ import os
 from dataset_reader import madelon
 from src.utils import balance_accuracy
 from src.network_models import three_layer_nn
-from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF
+from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF, LASSORFE, SVMRFE
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
 from keras import backend as K
@@ -18,6 +18,8 @@ fs_methods = [
     InfFS.InfFS,
     MIM.MIM,
     ReliefF.ReliefF,
+    SVMRFE.SVMRFE,
+    LASSORFE.LASSORFE
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -145,11 +147,11 @@ def main(dataset_name):
             if os.path.exists(fs_filename):
                 with open(fs_filename, 'r') as outfile:
                     fs_data = json.load(outfile)
-                fs_class = fs_method(n_features_to_select=200)
+                fs_class = fs_method(n_features_to_select=200 if 'RFE' not in fs_method.__name__ else 10)
                 fs_class.score = np.asarray(fs_data['score'])
                 fs_class.ranking = np.asarray(fs_data['ranking'])
             else:
-                fs_class = fs_method(n_features_to_select=200)
+                fs_class = fs_method(n_features_to_select=200 if 'RFE' not in fs_method.__name__ else 10)
                 fs_class.fit(train_data, 2. * train_labels[:, -1] - 1.)
                 fs_data = {
                     'score' : fs_class.score.tolist(),
