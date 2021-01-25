@@ -90,6 +90,8 @@ class E2EFSSoft(E2EFS_Base):
                  T=10000,
                  warmup_T=2000,
                  start_alpha=.0,
+                 alpha_N=.99,
+                 epsilon=.001,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
@@ -100,6 +102,8 @@ class E2EFSSoft(E2EFS_Base):
         self.warmup_T = warmup_T
         self.start_alpha = start_alpha
         self.cont_T = 0
+        self.alpha_M = alpha_N
+        self.epsilon = epsilon
         super(E2EFSSoft, self).__init__(units=units,
                                         kernel_regularizer=kernel_regularizer,
                                         kernel_initializer=kernel_initializer,
@@ -174,9 +178,9 @@ class E2EFSSoft(E2EFS_Base):
         update_list += [
             (self.moving_factor, K.switch(K.less(self.moving_T, self.warmup_T),
                                           self.start_alpha,
-                                          K.minimum(.99, self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
+                                          K.minimum(self.alpha_M, self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
             (self.moving_T, self.moving_T + 1),
-            (self.moving_decay, K.switch(K.less(self.moving_factor, .99), self.moving_decay, K.maximum(.75, self.moving_decay + 1e-3)))
+            (self.moving_decay, K.switch(K.less(self.moving_factor, self.alpha_M), self.moving_decay, K.maximum(.75, self.moving_decay + self.epsilon)))
         ]
         return update_list
 
@@ -209,6 +213,7 @@ class E2EFSRanking(E2EFS_Base):
                  warmup_T=2000,
                  start_alpha=.0,
                  speedup=4.,
+                 alpha_M =.99,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
@@ -219,6 +224,7 @@ class E2EFSRanking(E2EFS_Base):
         self.start_alpha = start_alpha
         self.cont_T = 0
         self.speedup = speedup
+        self.alpha_M = alpha_M
         super(E2EFSRanking, self).__init__(units=units,
                                         kernel_regularizer=kernel_regularizer,
                                         kernel_initializer=kernel_initializer,
@@ -301,11 +307,11 @@ class E2EFSRanking(E2EFS_Base):
         update_list += [
             (self.moving_factor, K.switch(K.less_equal(self.moving_T, self.warmup_T),
                                           self.start_alpha,
-                                          K.minimum(1., self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
+                                          K.minimum(self.alpha_M, self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
             (self.moving_T, self.moving_T + 1),
             (self.moving_units, K.switch(K.less_equal(self.moving_T, self.warmup_T),
                                          K.cast_to_floatx((1. - self.start_alpha) * np.prod(K.int_shape(kernel))),
-                                         K.maximum(1., np.prod(K.int_shape(kernel)) * K.pow(K.cast_to_floatx(1. / np.prod(K.int_shape(kernel))), self.speedup * (self.moving_T - self.warmup_T) / self.T)))),
+                                         K.maximum(self.alpha_M, np.prod(K.int_shape(kernel)) * K.pow(K.cast_to_floatx(1. / np.prod(K.int_shape(kernel))), self.speedup * (self.moving_T - self.warmup_T) / self.T)))),
                                          # K.maximum(1., (self.T - self.start_alpha - self.speedup * (self.moving_T - self.warmup_T)) * np.prod(K.int_shape(kernel)) / self.T))),
         ]
         return update_list

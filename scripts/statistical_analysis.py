@@ -87,7 +87,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'fs_challenge/gisette'
+    dataset = 'fs_challenge/gina'
     alpha = .05
 
     main(dataset, alpha)

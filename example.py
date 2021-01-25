@@ -1,34 +1,12 @@
-# E2E-FS
-E2E-FS: An End-to-End Feature Selection Method for Neural Networks
+from keras.datasets import mnist
+from keras.callbacks import LearningRateScheduler
+from keras.utils import to_categorical
+import e2efs
+from src.wrn.network_models import wrn164
+import numpy as np
 
-## Setup Instructions
 
-### The python environment is included in the file requirements.txt.
-Run the command:
- 
-    conda create --name e2efs --file ./requirements.txt
-
-### Instructions for compiling the extern liblinear library:
-Run the following commands:
-
-    cd extern/liblinear
-    make all 
-    cd python
-    make lib 
-
-## Running the code
-Activate the environment:
-
-    conda activate e2efs 
-
-All scripts are included into the script folder. To run it:
-
-    PYTHONPATH=.:$PYTHONPATH python scripts/microarray/run_all.py
-    PYTHONPATH=.:$PYTHONPATH python scripts/fs_challenge/run_all.py
-    PYTHONPATH=.:$PYTHONPATH python scripts/deep/run_all.py
-
-## HOW TO USE IT
-Example included in example.py    
+if __name__ == '__main__':
 
     ## LOAD DATA
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -62,3 +40,4 @@ Example included in example.py
     print('FEATURE_RANKING :', fs_class.get_ranking())
     print('ACCURACY : ', fs_class.get_model().evaluate(x_test, y_test, batch_size=128)[-1])
     print('FEATURE_MASK NNZ :', np.count_nonzero(fs_class.get_mask()))
+

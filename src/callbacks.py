@@ -4,24 +4,11 @@ from keras import backend as K
 
 class E2EFSCallback(Callback):
 
-    def __init__(self, factor_func=None, units_func=None, units=None, verbose=0, early_stop=True):
+    def __init__(self, units=None, verbose=0, early_stop=True):
         super(E2EFSCallback, self).__init__()
-        self.factor_func = factor_func
-        self.units_func = units_func
         self.verbose = verbose
         self.units = units
         self.early_stop = early_stop
-
-    def on_epoch_begin(self, epoch, logs=None):
-        layer = self.model.layers[1]
-        nnz_units = (K.eval(layer.e2efs_kernel) > 0).sum()
-        if hasattr(layer, 'moving_factor') and self.factor_func is not None:
-            factor = self.factor_func(epoch)
-            if hasattr(layer, 'regularization_loss') and nnz_units <= layer.units:
-                factor = 1., 1., 0.
-            K.set_value(layer.moving_factor, factor)
-        if hasattr(layer, 'moving_units') and self.units_func is not None:
-            K.set_value(layer.moving_units, self.units_func(epoch))
 
     def on_epoch_end(self, epoch, logs=None):
         layer = self.model.layers[1]

@@ -5,7 +5,7 @@ import tensorflow as tf
 
 class E2EFS_SGD(optimizers.SGD):
 
-    def __init__(self, e2efs_layer, e2efs_norm_max=1., e2efs_norm_min=.1, adam_lr=0.01, beta_1=0.5, beta_2=0.999,
+    def __init__(self, e2efs_layer, th=.1, adam_lr=0.01, beta_1=0.5, beta_2=0.999,
                  amsgrad=False, **kwargs):
         super(E2EFS_SGD, self).__init__(**kwargs)
         with K.name_scope(self.__class__.__name__):
@@ -14,8 +14,7 @@ class E2EFS_SGD(optimizers.SGD):
             self.beta_2 = K.variable(beta_2, name='beta_2')
         self.amsgrad = amsgrad
         self.e2efs_layer = e2efs_layer
-        self.e2efs_norm_max = e2efs_norm_max
-        self.e2efs_norm_min = e2efs_norm_min
+        self.th = th
 
     def get_gradients(self, loss, params):
         grads = super(E2EFS_SGD, self).get_gradients(loss, params)
@@ -35,7 +34,7 @@ class E2EFS_SGD(optimizers.SGD):
         # combined_e2efs_grad = optimizers.clip_norm(combined_e2efs_grad, self.e2efs_norm_max, combined_e2efs_grad_norm)
         # combined_e2efs_grad = K.maximum(combined_e2efs_grad_norm, self.e2efs_norm_min) / combined_e2efs_grad_norm * combined_e2efs_grad
         combined_e2efs_grad = K.sign(
-            self.e2efs_layer.moving_factor) * K.minimum(self.e2efs_norm_min, K.max(
+            self.e2efs_layer.moving_factor) * K.minimum(self.th, K.max(
             K.abs(combined_e2efs_grad))) * combined_e2efs_grad / K.max(
             K.abs(combined_e2efs_grad) + K.epsilon())
         # combined_e2efs_grad = K.tf.Print(combined_e2efs_grad, [K.max(combined_e2efs_grad), K.min(combined_e2efs_grad)])
@@ -135,10 +134,10 @@ class E2EFS_SGD(optimizers.SGD):
 
 class E2EFS_Adam(optimizers.Adam):
 
-    def __init__(self, e2efs_layer, e2efs_clipnorm=.1, lr_momentum=False, **kwargs):
+    def __init__(self, e2efs_layer, th=.1, lr_momentum=False, **kwargs):
         super(E2EFS_Adam, self).__init__(**kwargs)
         self.e2efs_layer = e2efs_layer
-        self.e2efs_clipnorm = e2efs_clipnorm
+        self.th = th
         self.lr_momentum = lr_momentum
 
     def get_gradients(self, loss, params):
@@ -159,7 +158,7 @@ class E2EFS_Adam(optimizers.Adam):
         # combined_e2efs_grad = optimizers.clip_norm(combined_e2efs_grad, self.e2efs_norm_max, combined_e2efs_grad_norm)
         # combined_e2efs_grad = K.maximum(combined_e2efs_grad_norm, self.e2efs_norm_min) / combined_e2efs_grad_norm * combined_e2efs_grad
         combined_e2efs_grad = K.sign(
-            self.e2efs_layer.moving_factor) * K.minimum(self.e2efs_clipnorm, K.max(K.abs(combined_e2efs_grad))) * combined_e2efs_grad / K.max(
+            self.e2efs_layer.moving_factor) * K.minimum(self.th, K.max(K.abs(combined_e2efs_grad))) * combined_e2efs_grad / K.max(
             K.abs(combined_e2efs_grad) + K.epsilon())
         # combined_e2efs_grad = K.tf.Print(combined_e2efs_grad, [K.max(combined_e2efs_grad), K.min(combined_e2efs_grad)])
         grads[0] = combined_e2efs_grad
