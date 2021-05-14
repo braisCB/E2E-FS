@@ -1,8 +1,8 @@
-from keras import backend as K, regularizers
+from tensorflow.keras import backend as K, regularizers
 from sklearn.svm import LinearSVC as sklearn_LinearSVC
-from keras.layers import Dense, Input
-from keras.models import Model
-from keras import optimizers
+from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.models import Model
+from tensorflow.keras import optimizers
 import numpy as np
 
 
