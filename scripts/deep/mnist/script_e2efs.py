@@ -22,11 +22,11 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.01):
     def sch(epoch):
         if epoch < 20 + extra:
             return .1 * factor
@@ -103,7 +103,7 @@ def main():
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
-            'regularization': regularization
+            # 'regularization': regularization
         }
 
         total_features = int(np.prod(train_data.shape[1:]))
@@ -124,7 +124,7 @@ def main():
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
-                verbose=verbose
+                verbose=1
             )
 
             model.save(model_filename)
@@ -154,7 +154,7 @@ def main():
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
                     optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
-                    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
+                    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'], run_eagerly=True)
                     model.fs_layer = e2efs_layer
                     model.classifier = classifier
                     model.summary()
@@ -163,13 +163,11 @@ def main():
                         fs_generator.flow(train_data, train_labels, **generator_kwargs),
                         steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                         callbacks=[
-                            E2EFSCallback(factor_func=None,
-                                              units_func=None,
-                                              verbose=verbose)
+                            E2EFSCallback(verbose=verbose)
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
-                        verbose=verbose
+                        verbose=1
                     )
                     n_times.append(time.time() - start_time)
                     model.fit_generator(

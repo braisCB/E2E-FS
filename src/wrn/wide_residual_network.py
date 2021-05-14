@@ -1,6 +1,6 @@
 from keras.layers import Add, Activation, Dropout
-from keras.layers.convolutional import Convolution2D
-from keras.layers.normalization import BatchNormalization
+from keras.layers import Convolution2D
+from keras.layers import BatchNormalization
 from keras import backend as K
 from keras.regularizers import l2
 import numpy as np

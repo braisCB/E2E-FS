@@ -54,12 +54,11 @@ class E2EFS_Base(layers.Layer):
             return output
 
         update_list = self._get_update_list(kernel)
-        self.add_update(update_list, inputs)
 
         return output
 
     def _get_update_list(self, kernel):
-
+        self.moving_heatmap.assign(self.heatmap_momentum * self.moving_heatmap + (1. - self.heatmap_momentum) * K.sign(kernel))
         update_list = [
             K.moving_average_update(self.moving_heatmap, K.sign(kernel), self.heatmap_momentum),
         ]
