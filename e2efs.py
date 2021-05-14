@@ -1,6 +1,6 @@
 from src.layers import e2efs
 from src import optimizers as custom_optimizers, callbacks as custom_callbacks
-from keras import backend as K
+from tensorflow.keras import backend as K
 import numpy as np
 
 
@@ -76,7 +76,7 @@ class E2EFSBase:
     def get_mask(self):
         self._check_model()
         input_shape = self.model.input_shape[1:]
-        return K.eval(self.model.fs_kernel).reshape(input_shape)
+        return K.eval(self.model.fs_kernel()).reshape(input_shape)
 
     def get_heatmap(self):
         self._check_model()

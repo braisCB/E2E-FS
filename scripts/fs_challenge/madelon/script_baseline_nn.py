@@ -1,5 +1,5 @@
-from keras.utils import to_categorical
-from keras import callbacks, optimizers as keras_optimizers
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
@@ -9,7 +9,7 @@ from src.network_models import three_layer_nn
 from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF, LASSORFE, SVMRFE
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 
 fs_methods = [

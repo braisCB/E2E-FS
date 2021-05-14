@@ -1,7 +1,7 @@
-from keras.models import Model
-from keras import backend as K, optimizers
-from keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D, Flatten
-from keras.regularizers import l2
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K, optimizers
+from tensorflow.keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D, Flatten
+from tensorflow.keras.regularizers import l2
 from src.wrn.wide_residual_network import wrn_block
 from src.network_models import three_layer_nn as tln
 import numpy as np

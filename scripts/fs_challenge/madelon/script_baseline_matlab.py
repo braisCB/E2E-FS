@@ -1,5 +1,5 @@
-from keras.utils import to_categorical
-from keras import callbacks, optimizers as keras_optimizers
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
@@ -10,7 +10,7 @@ from extern.liblinear.python import liblinearutil
 from src.baseline_methods.matlab import Matlab_ILFS, Matlab_infFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from keras import backend as K
+from tensorflow.keras import backend as K
 import matlab.engine  # you need to install MATLAB and the python wrapper
 
 

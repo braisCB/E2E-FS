@@ -1,6 +1,6 @@
-from keras.datasets import mnist
-from keras.callbacks import LearningRateScheduler
-from keras.utils import to_categorical
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.utils import to_categorical
 import e2efs
 from src.wrn.network_models import wrn164
 import numpy as np
