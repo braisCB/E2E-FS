@@ -36,7 +36,7 @@ class E2EFS_SGD(optimizers.SGD):
 
     def _prepare_local(self, var_device, var_dtype, apply_state):
         super(E2EFS_SGD, self)._prepare_local(var_device, var_dtype, apply_state)
-        e2efs_lr_t = array_ops.identity(self._decayed_lr(var_dtype))
+        e2efs_lr_t = array_ops.identity(self._get_hyper('e2efs_lr', var_dtype))
         apply_state[(var_device, var_dtype)]["e2efs_lr_t"] = e2efs_lr_t
 
         local_step = math_ops.cast(self.iterations + 1, var_dtype)
