@@ -7,10 +7,12 @@ import json
 import numpy as np
 import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from src.layers import e2efs
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ >= '2.0':
+    tf.set_random_seed = tf.random.set_seed
+
 
 
 batch_size = 128
@@ -21,7 +23,7 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'densenet'
 
 
 def create_rank(scores, k):
@@ -214,7 +216,7 @@ def main():
             output = classifier(classifier_input)
             model = models.Model(l2x_model.input, output)
 
-            optimizer = optimizers.adam(lr=1e-3)
+            optimizer = optimizers.Adam(learning_rate=1e-3)
             model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
             model.classifier = classifier
             model.summary()
