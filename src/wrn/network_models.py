@@ -2,6 +2,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K, optimizers, layers, models
 from tensorflow.keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D, Flatten
 from tensorflow.keras.regularizers import l2
+from tensorflow.keras.applications import EfficientNetB0
 from src.wrn.wide_residual_network import wrn_block
 from src.network_models import three_layer_nn as tln
 import numpy as np
@@ -76,7 +77,7 @@ def wrn164(
 
 def densenet(
         input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
-        data_augmentation=True
+        data_augmentation=True, regularization=0.
 ):
     num_bottleneck_layers = (depth - 4) // (2 * num_dense_blocks)
     num_filters_bef_dense_block = 2 * growth_rate
@@ -87,7 +88,7 @@ def densenet(
     x = layers.BatchNormalization()(inputs)
     x = layers.Activation('relu')(x)
     x = layers.Conv2D(num_filters_bef_dense_block,
-                      kernel_size=3,
+                      kernel_size=3, kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                       padding='same',
                       kernel_initializer='he_normal')(x)
     x = layers.concatenate([inputs, x])
@@ -99,7 +100,7 @@ def densenet(
             y = layers.BatchNormalization()(x)
             y = layers.Activation('relu')(y)
             y = layers.Conv2D(4 * growth_rate,
-                              kernel_size=1,
+                              kernel_size=1, kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                               padding='same',
                               kernel_initializer='he_normal')(y)
             if not data_augmentation:
@@ -107,7 +108,7 @@ def densenet(
             y = layers.BatchNormalization()(y)
             y = layers.Activation('relu')(y)
             y = layers.Conv2D(growth_rate,
-                              kernel_size=3,
+                              kernel_size=3, kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                               padding='same',
                               kernel_initializer='he_normal')(y)
             if not data_augmentation:
@@ -123,7 +124,7 @@ def densenet(
         num_filters_bef_dense_block = int(num_filters_bef_dense_block * compression_factor)
         y = layers.BatchNormalization()(x)
         y = layers.Conv2D(num_filters_bef_dense_block,
-                          kernel_size=1,
+                          kernel_size=1, kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                           padding='same',
                           kernel_initializer='he_normal')(y)
         if not data_augmentation:
@@ -136,6 +137,7 @@ def densenet(
     y = layers.Flatten()(x)
     outputs = layers.Dense(nclasses,
                            kernel_initializer='he_normal',
+                           kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                            activation='softmax')(y)
 
     # instantiate and compile model
@@ -143,6 +145,47 @@ def densenet(
     model = models.Model(inputs=inputs, outputs=outputs)
     model.compile(loss='categorical_crossentropy',
                   optimizer=optimizers.RMSprop(1e-3),
+                  metrics=['acc'])
+
+    return model
+
+
+def efficientnetB0(
+        input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
+        data_augmentation=True, regularization=0.
+):
+
+    keras_shape = input_shape
+    if input_shape[-1] == 1:
+        keras_shape = (32, 32, 3)
+
+    keras_model = EfficientNetB0(
+        include_top=False,
+        input_shape=keras_shape,
+        weights=None
+    )
+
+    outputs = keras_model.output
+    inputs = keras_model.input
+    if input_shape[-1] == 1:
+        inputs = layers.Input(shape=input_shape)
+        x = layers.ZeroPadding2D(padding=(2,2))(inputs)
+        output_shape = K.int_shape(x)
+        output_shape = output_shape[:-1] + (3,)
+        x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
+        outputs = keras_model(x)
+
+    outputs = layers.Flatten()(outputs)
+    outputs = layers.Dense(nclasses,
+                           kernel_initializer='he_normal',
+                           # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
+                           activation='softmax')(outputs)
+
+    # instantiate and compile model
+    # orig paper uses SGD but RMSprop works better for DenseNet
+    model = models.Model(inputs=inputs, outputs=outputs)
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=optimizers.Adam(1e-3),
                   metrics=['acc'])
 
     return model

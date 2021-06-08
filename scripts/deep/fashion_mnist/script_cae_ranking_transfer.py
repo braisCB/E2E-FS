@@ -11,6 +11,8 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ >= '2.0':
+    tf.set_random_seed = tf.random.set_seed
 
 
 batch_size = 128
@@ -23,7 +25,7 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'efficientnetB0'
 
 
 class ConcreteSelect(layers.Layer):
@@ -168,7 +170,7 @@ class ConcreteAutoencoderFeatureSelector():
         return self.model
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -265,7 +267,7 @@ def main():
                 generator.flow(train_data, train_labels, **generator_kwargs),
                 steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                 callbacks=[
-                    callbacks.LearningRateScheduler(scheduler(factor=1.))
+                    callbacks.LearningRateScheduler(scheduler())
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
@@ -311,7 +313,8 @@ def main():
             tf.set_random_seed(cont_seed)
             cont_seed += 1
             model = load_model(model_filename) if warming_up else getattr(network_models, classifier_network)(input_shape=train_data.shape[1:], **model_kwargs)
-            optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+            # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+            optimizer = optimizers.Adam(learning_rate=1e-2)
             model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
             model.fit_generator(

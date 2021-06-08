@@ -13,14 +13,14 @@ import tensorflow as tf
 import time
 
 
-batch_size = 128
+batch_size = 32
 regularization = 5e-4
-reps = 1
+reps = 5
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 
 
 def create_rank(scores, k):
@@ -104,7 +104,7 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.01):
     def sch(epoch):
         if epoch < 60 + extra:
             return .1 * factor
@@ -181,7 +181,7 @@ def main():
             print('training_model')
             model.fit_generator(
                 generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                 callbacks=[
                     callbacks.LearningRateScheduler(scheduler())
                 ],
@@ -200,7 +200,7 @@ def main():
         model_accuracies = []
         times = []
 
-        for factor in [.05, .1, .25, .5]:
+        for factor in [.5]:
             n_features = int(total_features * factor)
             n_accuracies = []
             n_model_accuracies = []
@@ -214,19 +214,20 @@ def main():
                 output = classifier(classifier_input)
                 model = models.Model(l2x_model.input, output)
 
-                optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                #optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                optimizer = optimizers.RMSprop(learning_rate=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()
                 start_time = time.time()
                 model.fit_generator(
                     generator.flow(train_data, train_labels, **generator_kwargs),
-                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                     callbacks=[
                         callbacks.LearningRateScheduler(scheduler(extra=0)),
                     ],
                     validation_data=(test_data, test_labels),
-                    validation_steps=test_data.shape[0] // batch_size,
+                    # validation_steps=test_data.shape[0] // batch_size,
                     verbose=verbose
                 )
                 n_model_accuracies.append(model.evaluate(test_data, test_labels, verbose=0)[-1])
@@ -242,12 +243,12 @@ def main():
                     input_shape=train_data.shape[1:], **model_kwargs)
                 classifier.fit_generator(
                     generator.flow(mask * train_data, train_labels, **generator_kwargs),
-                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                     callbacks=[
                         callbacks.LearningRateScheduler(scheduler(extra=0)),
                     ],
                     validation_data=(mask * test_data, test_labels),
-                    validation_steps=test_data.shape[0] // batch_size,
+                    # validation_steps=test_data.shape[0] // batch_size,
                     verbose=verbose
                 )
 

@@ -29,7 +29,7 @@ def fcnn(nfeatures, nclasses=2, layer_dims=None, bn=True, kernel_initializer='he
 
     model = Model(input, output)
 
-    optimizer = optimizers.adam(lr=1e-4)
+    optimizer = optimizers.Adam(lr=1e-4)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
     return model

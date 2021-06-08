@@ -15,12 +15,12 @@ import time
 
 batch_size = 128
 regularization = 5e-4
-reps = 10
+reps = 3
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['efficientnetB0', ]
 
 
 def create_rank(scores, k):
@@ -104,13 +104,13 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
-        if epoch < 60 + extra:
+        if epoch < 30 + extra:
             return .1 * factor
-        elif epoch < 80 + extra:
+        elif epoch < 50 + extra:
             return .02 * factor
-        elif epoch < 100 + extra:
+        elif epoch < 70 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -183,7 +183,7 @@ def main():
             print('training_model')
             model.fit_generator(
                 generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                 callbacks=[
                     callbacks.LearningRateScheduler(scheduler())
                 ],
@@ -216,14 +216,15 @@ def main():
                 output = classifier(classifier_input)
                 model = models.Model(l2x_model.input, output)
 
-                optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                optimizer = optimizers.Adam(lr=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()
                 start_time = time.time()
                 model.fit_generator(
                     generator.flow(train_data, train_labels, **generator_kwargs),
-                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                     callbacks=[
                         callbacks.LearningRateScheduler(scheduler(extra=0)),
                     ],
@@ -244,7 +245,7 @@ def main():
                     input_shape=train_data.shape[1:], **model_kwargs)
                 classifier.fit_generator(
                     generator.flow(mask * train_data, train_labels, **generator_kwargs),
-                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                    steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                     callbacks=[
                         callbacks.LearningRateScheduler(scheduler(extra=0)),
                     ],
@@ -252,7 +253,6 @@ def main():
                     validation_steps=test_data.shape[0] // batch_size,
                     verbose=verbose
                 )
-
                 n_accuracies.append(classifier.evaluate(mask * test_data, test_labels, verbose=0)[-1])
                 del classifier
                 K.clear_session()

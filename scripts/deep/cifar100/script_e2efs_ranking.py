@@ -1,6 +1,5 @@
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import callbacks, initializers, optimizers
-from src import optimizers as custom_optimizers
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import cifar100
 from src.wrn import network_models
@@ -9,10 +8,16 @@ import numpy as np
 import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
-from src.layers import e2efs
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ < '2.0':
+    from src import optimizers as custom_optimizers
+    from src.layers import e2efs
+else:
+    from src import optimizers_tf2 as custom_optimizers
+    from src.layers import e2efs_tf2 as e2efs
+    tf.set_random_seed = tf.random.set_seed
 
 
 batch_size = 128
@@ -24,11 +29,11 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.01):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -120,7 +125,7 @@ def main():
                 generator.flow(train_data, train_labels, **generator_kwargs),
                 steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                 callbacks=[
-                    callbacks.LearningRateScheduler(scheduler(factor=1.))
+                    callbacks.LearningRateScheduler(scheduler())
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
@@ -156,7 +161,8 @@ def main():
                                                   # kernel_initializer=initializers.constant(mask))
                         model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                        optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                        # optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                        optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)
                         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                         model.fs_layer = e2efs_layer
                         model.classifier = classifier
@@ -192,7 +198,8 @@ def main():
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
                     model = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    optimizer = optimizers.RMSprop(learning_rate=1e-3)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                     model.fit_generator(

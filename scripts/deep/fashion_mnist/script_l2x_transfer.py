@@ -21,7 +21,7 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'efficientnetB0'
 
 
 def create_rank(scores, k):
@@ -105,13 +105,13 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
-        if epoch < 60 + extra:
+        if epoch < 30 + extra:
             return .1 * factor
-        elif epoch < 80 + extra:
+        elif epoch < 50 + extra:
             return .02 * factor
-        elif epoch < 100 + extra:
+        elif epoch < 70 + extra:
             return .004 * factor
         else:
             return .0008 * factor
@@ -214,7 +214,7 @@ def main():
             output = classifier(classifier_input)
             model = models.Model(l2x_model.input, output)
 
-            optimizer = optimizers.adam(lr=1e-3)
+            optimizer = optimizers.Adam(lr=1e-3)
             model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
             model.classifier = classifier
             model.summary()
@@ -237,7 +237,8 @@ def main():
             K.clear_session()
             classifier = load_model(classifier_filename) if warming_up else getattr(network_models, classifier_network)(
                 input_shape=train_data.shape[1:], **model_kwargs)
-            optimizer = optimizers.SGD(lr=1e-1)
+            # optimizer = optimizers.RMSprop(learning_rate=1e-2)  # optimizers.SGD(lr=1e-1)
+            optimizer = optimizers.Adam(learning_rate=1e-3)
             classifier.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
             classifier.fit_generator(
                 generator.flow(mask * train_data, train_labels, **generator_kwargs),

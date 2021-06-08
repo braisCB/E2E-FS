@@ -21,7 +21,7 @@ else:
 
 
 batch_size = 128
-regularization = 5e-4
+regularization = 5e-6
 fs_reps = 1
 reps = 5
 verbose = 2
@@ -30,11 +30,11 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'efficientnetB0'
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -131,7 +131,7 @@ def main():
                 generator.flow(train_data, train_labels, **generator_kwargs),
                 steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
                 callbacks=[
-                    callbacks.LearningRateScheduler(scheduler(factor=1.))
+                    callbacks.LearningRateScheduler(scheduler())
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
@@ -167,7 +167,8 @@ def main():
                                               # kernel_initializer=initializers.constant(mask))
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                    optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    # optimizer = optimizers.RMSprop(learning_rate=1e-2)  # custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    optimizer = custom_optimizers.E2EFS_Adam(e2efs_layer=e2efs_layer, lr=1e-2)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                     model.fs_layer = e2efs_layer
                     model.classifier = classifier
@@ -203,7 +204,8 @@ def main():
                 tf.set_random_seed(cont_seed)
                 cont_seed += 1
                 model = load_model(model_filename) if warming_up else getattr(network_models, classifier_network)(input_shape=train_data.shape[1:], **model_kwargs)
-                optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                # optimizer = optimizers.RMSprop(learning_rate=1e-2)  # optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                optimizer = optimizers.Adam(learning_rate=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                 model.fit_generator(
