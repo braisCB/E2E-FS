@@ -20,7 +20,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 
 
 def create_rank(scores, k):
@@ -104,7 +104,7 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 60 + extra:
             return .1 * factor
@@ -216,7 +216,8 @@ def main():
                 output = classifier(classifier_input)
                 model = models.Model(l2x_model.input, output)
 
-                optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                optimizer = optimizers.RMSprop(lr=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()

@@ -21,7 +21,7 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'densenet'
 
 
 def create_rank(scores, k):

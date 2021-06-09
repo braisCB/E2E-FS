@@ -207,3 +207,91 @@ class E2EFS_Adam(optimizers.Adam):
 
             self.updates.append(K.update(p, new_p))
         return self.updates
+
+
+class E2EFS_RMSprop(optimizers.RMSprop):
+    """RMSProp optimizer.
+
+    It is recommended to leave the parameters of this optimizer
+    at their default values
+    (except the learning rate, which can be freely tuned).
+
+    This optimizer is usually a good choice for recurrent
+    neural networks.
+
+    # Arguments
+        lr: float >= 0. Learning rate.
+        rho: float >= 0.
+        epsilon: float >= 0. Fuzz factor. If `None`, defaults to `K.epsilon()`.
+        decay: float >= 0. Learning rate decay over each update.
+
+    # References
+        - [rmsprop: Divide the gradient by a running average of its recent magnitude]
+          (http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf)
+    """
+
+    def __init__(self, e2efs_layer, th=.1, e2efs_lr=.01, lr_momentum=False, **kwargs):
+        super(E2EFS_RMSprop, self).__init__(**kwargs)
+        self.e2efs_layer = e2efs_layer
+        self.th = th
+        self.e2efs_lr = e2efs_lr
+        self.lr_momentum = lr_momentum
+
+    def get_gradients(self, loss, params):
+        grads = super(E2EFS_RMSprop, self).get_gradients(loss, params)
+        if not (hasattr(self.e2efs_layer, 'regularization_loss')):
+            return grads
+        e2efs_grad = grads[0]
+        e2efs_regularizer_grad = K.gradients(self.e2efs_layer.regularization_loss, [self.e2efs_layer.kernel])[0]
+        # norm_e2efs_grad_clipped = K.maximum(0.1, tf.norm(e2efs_grad) + K.epsilon())
+        # e2efs_regularizer_grad_corrected = e2efs_regularizer_grad / K.max(K.abs(e2efs_regularizer_grad) + K.epsilon())
+        # e2efs_grad_corrected = e2efs_grad / K.max(K.abs(e2efs_grad) + K.epsilon())
+        e2efs_regularizer_grad_corrected = e2efs_regularizer_grad / (K.tf.norm(e2efs_regularizer_grad) + K.epsilon())
+        e2efs_grad_corrected = e2efs_grad / (K.tf.norm(e2efs_grad) + K.epsilon())
+        # e2efs_regularizer_grad_corrected = norm_e2efs_grad_clipped * e2efs_regularizer_grad / (tf.norm(e2efs_regularizer_grad) + K.epsilon())
+        combined_e2efs_grad = (1. - self.e2efs_layer.moving_factor) * e2efs_grad_corrected + \
+                              self.e2efs_layer.moving_factor * e2efs_regularizer_grad_corrected
+        # combined_e2efs_grad_norm = tf.norm(combined_e2efs_grad) + K.epsilon()
+        # combined_e2efs_grad = optimizers.clip_norm(combined_e2efs_grad, self.e2efs_norm_max, combined_e2efs_grad_norm)
+        # combined_e2efs_grad = K.maximum(combined_e2efs_grad_norm, self.e2efs_norm_min) / combined_e2efs_grad_norm * combined_e2efs_grad
+        combined_e2efs_grad = K.sign(
+            self.e2efs_layer.moving_factor) * K.minimum(self.th, K.max(
+            K.abs(combined_e2efs_grad))) * combined_e2efs_grad / K.max(
+            K.abs(combined_e2efs_grad) + K.epsilon())
+        # combined_e2efs_grad = K.tf.Print(combined_e2efs_grad, [K.max(combined_e2efs_grad), K.min(combined_e2efs_grad)])
+        grads[0] = combined_e2efs_grad
+        return grads
+
+    def get_updates(self, loss, params):
+        grads = self.get_gradients(loss, params)
+        accumulators = [K.zeros(K.int_shape(p), dtype=K.dtype(p)) for p in params]
+        self.weights = accumulators
+        self.updates = [K.update_add(self.iterations, 1)]
+
+        lr = self.lr
+        if self.initial_decay > 0:
+            lr = lr * (1. / (1. + self.decay * K.cast(self.iterations,
+                                                      K.dtype(self.decay))))
+
+        for i, (p, g, a) in enumerate(zip(params, grads, accumulators)):
+            # update accumulator
+            rho = 0.5 if i == 0 and self.e2efs_layer is not None and not self.lr_momentum else self.rho
+            i_lr = self.e2efs_lr if i == 0 and self.e2efs_layer is not None and not self.lr_momentum else lr
+            new_a = rho * a + (1. - rho) * K.square(g)
+            self.updates.append(K.update(a, new_a))
+            new_p = p - i_lr * g / (K.sqrt(new_a) + self.epsilon)
+
+            # Apply constraints.
+            if getattr(p, 'constraint', None) is not None:
+                new_p = p.constraint(new_p)
+
+            self.updates.append(K.update(p, new_p))
+        return self.updates
+
+    def get_config(self):
+        config = {'lr': float(K.get_value(self.lr)),
+                  'rho': float(K.get_value(self.rho)),
+                  'decay': float(K.get_value(self.decay)),
+                  'epsilon': self.epsilon}
+        base_config = super(E2EFS_RMSprop, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

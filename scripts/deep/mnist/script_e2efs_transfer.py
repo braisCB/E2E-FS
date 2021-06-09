@@ -22,7 +22,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-classifier_network = 'wrn164'
+classifier_network = 'densenet'
 fs_network = 'three_layer_nn'
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
@@ -161,9 +161,7 @@ def main():
                     fs_generator.flow(train_data, train_labels, **generator_kwargs),
                     steps_per_epoch=train_data.shape[0] // batch_size, epochs=20000,
                     callbacks=[
-                        E2EFSCallback(factor_func=None,
-                                          units_func=None,
-                                          verbose=verbose)
+                        E2EFSCallback(verbose=verbose)
                     ],
                     validation_data=(test_data, test_labels),
                     validation_steps=test_data.shape[0] // batch_size,

@@ -23,7 +23,7 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'three_layer_nn'
-classifier_network = 'wrn164'
+classifier_network = 'densenet'
 
 
 class ConcreteSelect(layers.Layer):
@@ -243,7 +243,7 @@ def main():
     print(name)
     model_kwargs = {
         'nclasses': num_classes,
-        'regularization': regularization
+        # 'regularization': regularization
     }
 
     total_features = int(np.prod(train_data.shape[1:]))

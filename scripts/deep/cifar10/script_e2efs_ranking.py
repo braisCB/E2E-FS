@@ -24,11 +24,11 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.01):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -156,7 +156,8 @@ def main():
                                                   # kernel_initializer=initializers.constant(mask))
                         model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                        optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                        # optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
+                        optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)
                         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                         model.fs_layer = e2efs_layer
                         model.classifier = classifier
@@ -182,7 +183,7 @@ def main():
                     times.append(time.time() - start_time)
                 fs_rank = np.argsort(heatmap)[::-1]
 
-                for i, factor in enumerate([.25, .5]):
+                for i, factor in enumerate([.05, .1, .25, .5]):
                     print('factor : ', factor, ' , rep : ', r)
                     n_features = int(total_features * factor)
                     mask = np.zeros(train_data.shape[1:])
@@ -192,7 +193,8 @@ def main():
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
                     model = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-                    optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
+                    optimizer = optimizers.RMSprop(lr=1e-3)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                     model.fit_generator(

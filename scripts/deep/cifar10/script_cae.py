@@ -18,7 +18,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 
 
 class ConcreteSelect(layers.Layer):
@@ -114,7 +114,7 @@ class ConcreteAutoencoderFeatureSelector():
 
             self.model.compile(
                 loss='categorical_crossentropy',
-                optimizer=optimizers.Adam(1e-1),
+                optimizer=optimizers.RMSprop(1e-2),
                 metrics=['acc']
             )
 
@@ -163,7 +163,7 @@ class ConcreteAutoencoderFeatureSelector():
         return self.model
 
 
-def scheduler(extra=0, factor=1.):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
