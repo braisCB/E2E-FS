@@ -3,7 +3,7 @@ from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
-from dataset_reader import dexter
+from dataset_reader import lymphoma
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
 from extern.liblinear.python import liblinearutil
@@ -16,6 +16,7 @@ import tensorflow as tf
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+
 epochs = 150
 extra_epochs = 200
 mu = 100
@@ -26,9 +27,9 @@ loss_function = 'square_hinge'
 k_folds = 3
 k_fold_reps = 20
 optimizer_class = optimizers.E2EFS_Adam
-normalization_func = dexter.Normalize
+normalization_func = lymphoma.Normalize
 
-dataset_name = 'dexter'
+dataset_name = 'lymphoma'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 
 initial_lr = .01
@@ -47,7 +48,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = dexter.load_dataset()
+    dataset = lymphoma.load_dataset()
     return dataset
 
 
@@ -196,7 +197,7 @@ def main(dataset_name):
         for r in range(reps):
             np.random.seed(cont_seed)
 
-            tf.set_random_seed(cont_seed)
+            tf.random.set_seed(cont_seed)
             cont_seed += 1
 
             model = train_SVC(svc_train_data_norm, train_labels, svc_kwargs)

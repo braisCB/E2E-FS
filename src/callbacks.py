@@ -1,5 +1,5 @@
-from keras.callbacks import Callback
-from keras import backend as K
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras import backend as K
 
 
 class E2EFSCallback(Callback):
@@ -14,7 +14,7 @@ class E2EFSCallback(Callback):
         layer = self.model.layers[1]
         units = self.units or layer.units
         moving_factor = K.eval(layer.moving_factor) if hasattr(layer, 'moving_factor') else None
-        e2efs_kernel = K.eval(layer.e2efs_kernel)
+        e2efs_kernel = K.eval(layer.e2efs_kernel())
         if self.verbose > 0 or (e2efs_kernel > 0.).sum() <= units or epoch % 100 == 0:
             print(
                 "Epoch %05d: cost stopping %.6f" % (epoch, logs['loss']),

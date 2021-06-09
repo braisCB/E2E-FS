@@ -1,7 +1,7 @@
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import Lasso
 import numpy as np
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 
 
 class LASSORFE:

@@ -1,16 +1,16 @@
-from keras.utils import to_categorical
-from keras import callbacks, initializers
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import callbacks, initializers
 from src import optimizers as custom_optimizers
-from keras.models import load_model
-from keras.datasets import mnist
+from tensorflow.keras.models import load_model
+from tensorflow.keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
 import os
-from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
 from src.layers import e2efs
-from keras import backend as K
+from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
 
@@ -22,7 +22,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['wrn164', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
@@ -103,7 +103,7 @@ def main():
         print(name)
         model_kwargs = {
             'nclasses': num_classes,
-            'regularization': regularization
+            # 'regularization': regularization
         }
 
         total_features = int(np.prod(train_data.shape[1:]))
@@ -124,7 +124,7 @@ def main():
                 ],
                 validation_data=(test_data, test_labels),
                 validation_steps=test_data.shape[0] // batch_size,
-                verbose=verbose
+                verbose=1
             )
 
             model.save(model_filename)
@@ -167,7 +167,7 @@ def main():
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
-                        verbose=verbose
+                        verbose=1
                     )
                     n_times.append(time.time() - start_time)
                     model.fit_generator(

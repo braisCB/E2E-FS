@@ -1,5 +1,5 @@
-from keras.utils import to_categorical
-from keras import callbacks, initializers, layers, models, optimizers
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import callbacks, initializers, layers, models, optimizers
 import json
 import numpy as np
 import os
@@ -9,11 +9,11 @@ from src.svc.models import LinearSVC
 from extern.liblinear.python import liblinearutil
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from keras import backend as K
+from tensorflow.keras import backend as K
 from src import callbacks as clbks
 import time
 import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+from tensorflow.keras.backend.tensorflow_backend import set_session
 config = tf.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.2
 set_session(tf.Session(config=config))

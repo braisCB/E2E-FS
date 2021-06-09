@@ -1,16 +1,18 @@
-from keras.utils import to_categorical
-from keras import callbacks, regularizers, layers, models, optimizers
-from keras.models import load_model
-from keras.datasets import mnist
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import callbacks, regularizers, layers, models, optimizers
+from tensorflow.keras.models import load_model
+from tensorflow.keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
 import os
-from keras.preprocessing.image import ImageDataGenerator
-from src.layers import e2efs
-from keras import backend as K
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ >= '2.0':
+    tf.set_random_seed = tf.random.set_seed
+
 
 
 batch_size = 128
@@ -214,7 +216,7 @@ def main():
             output = classifier(classifier_input)
             model = models.Model(l2x_model.input, output)
 
-            optimizer = optimizers.adam(lr=1e-3)
+            optimizer = optimizers.Adam(learning_rate=1e-3)
             model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
             model.classifier = classifier
             model.summary()

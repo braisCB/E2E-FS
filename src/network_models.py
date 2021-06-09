@@ -1,6 +1,6 @@
-from keras.models import Model
-from keras import backend as K, optimizers, layers
-from keras.regularizers import l1, l2
+from tensorflow.keras.models import Model
+from tensorflow.keras import backend as K, optimizers, layers
+from tensorflow.keras.regularizers import l1, l2
 from src.layers.mask import Mask
 
 
@@ -29,7 +29,7 @@ def fcnn(nfeatures, nclasses=2, layer_dims=None, bn=True, kernel_initializer='he
 
     model = Model(input, output)
 
-    optimizer = optimizers.adam(lr=1e-4)
+    optimizer = optimizers.Adam(lr=1e-4)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
     return model

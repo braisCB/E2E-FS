@@ -1,7 +1,14 @@
-from src.layers import e2efs
-from src import optimizers as custom_optimizers, callbacks as custom_callbacks
-from keras import backend as K
+from src import callbacks as custom_callbacks
+from tensorflow.keras import backend as K
+import tensorflow as tf
 import numpy as np
+if tf.__version__ < '2.0':
+    from src import optimizers as custom_optimizers
+    from src.layers import e2efs
+else:
+    from src import optimizers_tf2 as custom_optimizers
+    from src.layers import e2efs_tf2 as e2efs
+    tf.set_random_seed = tf.random.set_seed
 
 
 class E2EFSBase:
@@ -22,6 +29,8 @@ class E2EFSBase:
             opt = custom_optimizers.E2EFS_SGD(self.e2efs_layer, th=self.th, **kwargs)
         elif 'adam' in type(model.optimizer).__name__.lower():
             opt = custom_optimizers.E2EFS_Adam(self.e2efs_layer, th=self.th, **kwargs)
+        elif 'RMSprop' in type(model.optimizer).__name__.lower():
+            opt = custom_optimizers.E2EFS_RMSprop(self.e2efs_layer, th=self.th, **kwargs)
         else:
             raise Exception('Optimizer not supported. Contact the authors if you need it')
         self.model.compile(opt, model.loss, model.metrics, model.loss_weights, model.sample_weight_mode,
@@ -76,7 +85,7 @@ class E2EFSBase:
     def get_mask(self):
         self._check_model()
         input_shape = self.model.input_shape[1:]
-        return K.eval(self.model.fs_kernel).reshape(input_shape)
+        return K.eval(self.model.fs_kernel()).reshape(input_shape)
 
     def get_heatmap(self):
         self._check_model()

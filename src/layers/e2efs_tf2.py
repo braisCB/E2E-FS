@@ -37,9 +37,11 @@ class E2EFS_Base(layers.Layer):
                                               name='heatmap',
                                               initializer='ones',
                                               trainable=False)
-        self.e2efs_kernel = self.kernel if self.kernel_activation is None else self.kernel_activation(self.kernel)
         self.stateful = False
         self.built = True
+
+    def e2efs_kernel(self):
+        return self.kernel if self.kernel_activation is None else self.kernel_activation(self.kernel)
 
     def call(self, inputs, training=None, **kwargs):
 
@@ -53,16 +55,14 @@ class E2EFS_Base(layers.Layer):
         if training in {0, False}:
             return output
 
-        update_list = self._get_update_list(kernel)
+        self._get_update_list(kernel)
 
         return output
 
     def _get_update_list(self, kernel):
-        self.moving_heatmap.assign(self.heatmap_momentum * self.moving_heatmap + (1. - self.heatmap_momentum) * K.sign(kernel))
-        update_list = [
-            K.moving_average_update(self.moving_heatmap, K.sign(kernel), self.heatmap_momentum),
-        ]
-        return update_list
+        self.moving_heatmap.assign(
+            self.heatmap_momentum * self.moving_heatmap + (1. - self.moving_heatmap) * K.sign(kernel)
+        )
 
     def add_to_model(self, model, input_shape, activation=None):
         input = layers.Input(shape=input_shape)
@@ -171,17 +171,21 @@ class E2EFSSoft(E2EFS_Base):
             return cost
 
         self.regularization_loss = regularization(self.kernel)
+        self.regularization_func = regularization
 
     def _get_update_list(self, kernel):
-        update_list = super(E2EFSSoft, self)._get_update_list(kernel)
-        update_list += [
-            (self.moving_factor, K.switch(K.less(self.moving_T, self.warmup_T),
-                                          self.start_alpha,
-                                          K.minimum(self.alpha_M, self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
-            (self.moving_T, self.moving_T + 1),
-            (self.moving_decay, K.switch(K.less(self.moving_factor, self.alpha_M), self.moving_decay, K.maximum(.75, self.moving_decay + self.epsilon)))
-        ]
-        return update_list
+        super(E2EFSSoft, self)._get_update_list(kernel)
+        self.moving_factor.assign(
+            K.switch(K.less(self.moving_T, self.warmup_T),
+                     self.start_alpha,
+                     K.minimum(self.alpha_M,
+                               self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))
+        )
+        self.moving_T.assign_add(1.)
+        self.moving_decay.assign(
+            K.switch(K.less(self.moving_factor, self.alpha_M), self.moving_decay,
+                     K.maximum(.75, self.moving_decay + self.epsilon))
+        )
 
 
 class E2EFS(E2EFSSoft):
@@ -300,17 +304,22 @@ class E2EFSRanking(E2EFS_Base):
             return cost
 
         self.regularization_loss = regularization(self.kernel)
+        self.regularization_func = regularization
 
     def _get_update_list(self, kernel):
-        update_list = super(E2EFSRanking, self)._get_update_list(kernel)
-        update_list += [
-            (self.moving_factor, K.switch(K.less_equal(self.moving_T, self.warmup_T),
-                                          self.start_alpha,
-                                          K.minimum(self.alpha_M, self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))),
-            (self.moving_T, self.moving_T + 1),
-            (self.moving_units, K.switch(K.less_equal(self.moving_T, self.warmup_T),
-                                         K.cast_to_floatx((1. - self.start_alpha) * np.prod(K.int_shape(kernel))),
-                                         K.maximum(self.alpha_M, np.prod(K.int_shape(kernel)) * K.pow(K.cast_to_floatx(1. / np.prod(K.int_shape(kernel))), self.speedup * (self.moving_T - self.warmup_T) / self.T)))),
-                                         # K.maximum(1., (self.T - self.start_alpha - self.speedup * (self.moving_T - self.warmup_T)) * np.prod(K.int_shape(kernel)) / self.T))),
-        ]
-        return update_list
+        super(E2EFSRanking, self)._get_update_list(kernel)
+        self.moving_factor.assign(
+            K.switch(K.less(self.moving_T, self.warmup_T),
+                     self.start_alpha,
+                     K.minimum(self.alpha_M,
+                               self.start_alpha + (1. - self.start_alpha) * (self.moving_T - self.warmup_T) / self.T))
+        )
+        self.moving_T.assign_add(1.)
+        self.moving_units.assign(
+            K.switch(K.less_equal(self.moving_T, self.warmup_T),
+                     K.cast_to_floatx((1. - self.start_alpha) * np.prod(K.int_shape(kernel))),
+                     K.maximum(self.alpha_M,
+                               np.prod(K.int_shape(kernel)) * K.pow(K.cast_to_floatx(1. / np.prod(K.int_shape(kernel))),
+                                                                    self.speedup * (
+                                                                                self.moving_T - self.warmup_T) / self.T)))
+        )

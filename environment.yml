@@ -144,7 +144,6 @@ tensorflow=1.12.0=gpu_py36he74679b_0
 tensorflow-base=1.12.0=gpu_py36had579c0_0
 tensorflow-gpu=1.12.0=h0d30ee6_0
 termcolor=1.1.0=py_2
-theano=1.0.3=py36hfc679d8_1
 tk=8.6.9=ha92aebf_0
 tornado=5.1.1=py36h14c3975_1000
 tqdm=4.43.0=py_0
