@@ -7,12 +7,20 @@ from src.wrn import network_models
 import json
 import numpy as np
 import os
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
 from src.layers import e2efs
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ < '2.0':
+    from src import optimizers as custom_optimizers
+    from src.layers import e2efs
+else:
+    from src import optimizers_tf2 as custom_optimizers
+    from src.layers import e2efs_tf2 as e2efs
+    tf.set_random_seed = tf.random.set_seed
+
 
 
 batch_size = 128
@@ -26,7 +34,7 @@ network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
-def scheduler(extra=0, factor=.01):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 20 + extra:
             return .1 * factor
@@ -167,7 +175,7 @@ def main():
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
-                        verbose=1
+                        verbose=verbose
                     )
                     n_times.append(time.time() - start_time)
                     model.fit_generator(
