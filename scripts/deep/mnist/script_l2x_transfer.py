@@ -23,7 +23,7 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 fs_network = 'three_layer_nn'
-classifier_network = 'densenet'
+classifier_network = 'efficientnetB0'
 
 
 def create_rank(scores, k):
@@ -239,7 +239,7 @@ def main():
             K.clear_session()
             classifier = load_model(classifier_filename) if warming_up else getattr(network_models, classifier_network)(
                 input_shape=train_data.shape[1:], **model_kwargs)
-            optimizer = optimizers.SGD(lr=1e-1)
+            optimizer = optimizers.Adam(lr=1e-3)
             classifier.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
             classifier.fit_generator(
                 generator.flow(mask * train_data, train_labels, **generator_kwargs),

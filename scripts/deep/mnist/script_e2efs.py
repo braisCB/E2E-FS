@@ -1,6 +1,5 @@
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import callbacks, initializers
-from src import optimizers as custom_optimizers
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import mnist
 from src.wrn import network_models
@@ -9,10 +8,16 @@ import numpy as np
 import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
-from src.layers import e2efs
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ < '2.0':
+    from src import optimizers as custom_optimizers
+    from src.layers import e2efs
+else:
+    from src import optimizers_tf2 as custom_optimizers
+    from src.layers import e2efs_tf2 as e2efs
+    tf.set_random_seed = tf.random.set_seed
 
 
 batch_size = 128
@@ -22,11 +27,11 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['densenet', ]
+network_names = ['efficientnetB0', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
-def scheduler(extra=0, factor=.01):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 20 + extra:
             return .1 * factor
@@ -153,7 +158,7 @@ def main():
                     e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], kernel_initializer=initializers.constant(mask))
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
-                    optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)  # optimizers.adam(lr=1e-2)
+                    optimizer = custom_optimizers.E2EFS_Adam(e2efs_layer=e2efs_layer, lr=1e-2)  # optimizers.adam(lr=1e-2)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                     model.fs_layer = e2efs_layer
                     model.classifier = classifier
