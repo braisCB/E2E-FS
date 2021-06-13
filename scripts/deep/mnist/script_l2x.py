@@ -20,7 +20,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['densenet', ]
+network_names = ['efficientnetB0', ]
 
 
 def create_rank(scores, k):
@@ -217,7 +217,8 @@ def main():
                 model = models.Model(l2x_model.input, output)
 
                 # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                optimizer = optimizers.RMSprop(lr=1e-2)
+                # optimizer = optimizers.RMSprop(lr=1e-2)
+                optimizer = optimizers.Adam(learning_rate=1e-3)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()

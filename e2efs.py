@@ -8,7 +8,6 @@ if tf.__version__ < '2.0':
 else:
     from src import optimizers_tf2 as custom_optimizers
     from src.layers import e2efs_tf2 as e2efs
-    tf.set_random_seed = tf.random.set_seed
 
 
 class E2EFSBase:
