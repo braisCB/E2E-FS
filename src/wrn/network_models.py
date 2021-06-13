@@ -162,7 +162,7 @@ def efficientnetB0(
     keras_model = EfficientNetB0(
         include_top=False,
         input_shape=keras_shape,
-        weights='imagenet'
+        weights=None
     )
 
     outputs = keras_model.output
@@ -175,9 +175,9 @@ def efficientnetB0(
         x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
         outputs = keras_model(x)
 
-    # outputs = layers.Flatten()(outputs)
-    outputs = layers.GlobalAveragePooling2D()(outputs)
-    outputs = layers.Dropout(rate=.5)(outputs)
+    outputs = layers.Flatten()(outputs)
+    # outputs = layers.GlobalAveragePooling2D()(outputs)
+    # outputs = layers.Dropout(rate=.5)(outputs)
     outputs = layers.Dense(nclasses,
                            kernel_initializer='he_normal',
                            # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
@@ -205,8 +205,18 @@ def densenet121(
     keras_model = DenseNet121(
         include_top=False,
         input_shape=keras_shape,
-        weights='imagenet'
+        weights=None
     )
+
+    keras_model.trainable = True
+
+    # adding regularization
+    regularizer = l2(regularization)
+
+    for layer in keras_model.layers:
+        for attr in ['kernel_regularizer']:
+            if hasattr(layer, attr):
+                setattr(layer, attr, regularizer)
 
     outputs = keras_model.output
     inputs = keras_model.input
@@ -218,12 +228,12 @@ def densenet121(
         x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
         outputs = keras_model(x)
 
-    # outputs = layers.Flatten()(outputs)
-    outputs = layers.GlobalAveragePooling2D()(outputs)
-    outputs = layers.Dropout(rate=.5)(outputs)
+    outputs = layers.Flatten()(outputs)
+    # outputs = layers.GlobalAveragePooling2D()(outputs)
+    # outputs = layers.Dropout(rate=.5)(outputs)
     outputs = layers.Dense(nclasses,
                            kernel_initializer='he_normal',
-                           # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
+                           kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                            activation='softmax')(outputs)
 
     # instantiate and compile model
