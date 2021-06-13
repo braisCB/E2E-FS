@@ -33,7 +33,7 @@ network_names = ['densenet121', ]
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=.001):
+def scheduler(extra=0, factor=.1):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
