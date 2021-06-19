@@ -1,6 +1,5 @@
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import callbacks, initializers, optimizers
-from src import optimizers as custom_optimizers
 from tensorflow.keras.models import load_model
 from tensorflow.keras.datasets import cifar10
 from src.wrn import network_models
@@ -9,26 +8,32 @@ import numpy as np
 import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
-from src.layers import e2efs
 from tensorflow.keras import backend as K
 import tensorflow as tf
 import time
+if tf.__version__ < '2.0':
+    from src import optimizers as custom_optimizers
+    from src.layers import e2efs
+else:
+    from src import optimizers_tf2 as custom_optimizers
+    from src.layers import e2efs_tf2 as e2efs
+    tf.set_random_seed = tf.random.set_seed
 
 
 batch_size = 128
 regularization = 5e-4
 fs_reps = 1
 reps = 5
-verbose = 2
+verbose = 1
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-network_names = ['densenet', ]
+network_names = ['efficientnetB0', ]
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=.01):
+def scheduler(extra=0, factor=.001):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -44,16 +49,20 @@ def scheduler(extra=0, factor=.01):
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
     generator_fs = ImageDataGenerator(
-        width_shift_range=5./32.,
-        height_shift_range=5./32.,
+        # width_shift_range=5./32.,
+        # height_shift_range=5./32.,
         fill_mode='reflect',
         horizontal_flip=True,
+        # vertical_flip=True,
+        #rotation_range=40,
     )
     generator = ImageDataGenerator(
-        width_shift_range=5./32.,
-        height_shift_range=5./32.,
+        # width_shift_range=5./32.,
+        # height_shift_range=5./32.,
         fill_mode='reflect',
-        horizontal_flip=True
+        horizontal_flip=True,
+        #vertical_flip=True,
+        #rotation_range=40,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -118,12 +127,12 @@ def main():
             print('training_model')
             model.fit_generator(
                 generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
+                steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
                 callbacks=[
-                    callbacks.LearningRateScheduler(scheduler(factor=1.))
+                    callbacks.LearningRateScheduler(scheduler(extra=30))
                 ],
                 validation_data=(test_data, test_labels),
-                validation_steps=test_data.shape[0] // batch_size,
+                # validation_steps=test_data.shape[0] // batch_size,
                 verbose=verbose
             )
 
@@ -157,7 +166,8 @@ def main():
                         model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
                         # optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
-                        optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)
+                        # optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)
+                        optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, learning_rate=1e-3)
                         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                         model.fs_layer = e2efs_layer
                         model.classifier = classifier
@@ -171,7 +181,7 @@ def main():
                                               verbose=verbose)
                             ],
                             validation_data=(test_data, test_labels),
-                            validation_steps=test_data.shape[0] // batch_size,
+                            # validation_steps=test_data.shape[0] // batch_size,
                             verbose=verbose
                         )
                         heatmap += K.eval(model.heatmap)
@@ -194,7 +204,7 @@ def main():
                     cont_seed += 1
                     model = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
                     # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                    optimizer = optimizers.RMSprop(lr=1e-3)
+                    optimizer = optimizers.Adam(learning_rate=1e-3)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                     model.fit_generator(
@@ -204,7 +214,7 @@ def main():
                             callbacks.LearningRateScheduler(scheduler()),
                         ],
                         validation_data=(mask * test_data, test_labels),
-                        validation_steps=test_data.shape[0] // batch_size,
+                        # validation_steps=test_data.shape[0] // batch_size,
                         verbose=verbose
                     )
                     acc = model.evaluate(mask * test_data, test_labels, verbose=0)[-1]

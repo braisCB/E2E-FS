@@ -13,14 +13,14 @@ import tensorflow as tf
 import time
 
 
-batch_size = 32
+batch_size = 128
 regularization = 5e-4
 reps = 5
 verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['densenet', ]
+network_names = ['efficientnetB0', ]
 
 
 def create_rank(scores, k):
@@ -104,7 +104,7 @@ def get_l2x_model(input_shape, nfeatures):
     return models.Model(model_input, samples)
 
 
-def scheduler(extra=0, factor=.01):
+def scheduler(extra=0, factor=.001):
     def sch(epoch):
         if epoch < 60 + extra:
             return .1 * factor
@@ -121,8 +121,8 @@ def load_dataset():
     (x_train, y_train), (x_test, y_test) = cifar100.load_data()
     generator = ImageDataGenerator(
         horizontal_flip=True,
-        height_shift_range=5./32.,
-        width_shift_range=5./32.,
+        # height_shift_range=5./32.,
+        # width_shift_range=5./32.,
         fill_mode='reflect'
     )
     y_train = np.reshape(y_train, [-1, 1])
@@ -200,7 +200,7 @@ def main():
         model_accuracies = []
         times = []
 
-        for factor in [.5]:
+        for factor in [.05, .1, .25]:
             n_features = int(total_features * factor)
             n_accuracies = []
             n_model_accuracies = []
@@ -215,7 +215,7 @@ def main():
                 model = models.Model(l2x_model.input, output)
 
                 #optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                optimizer = optimizers.RMSprop(learning_rate=1e-2)
+                optimizer = optimizers.SGD(learning_rate=1e-4)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                 model.classifier = classifier
                 model.summary()
