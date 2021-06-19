@@ -27,7 +27,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['densenet121', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
