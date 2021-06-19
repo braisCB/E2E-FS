@@ -27,11 +27,11 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['densenet', ]
-e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
+network_names = ['efficientnetB0', ]
+e2efs_classes = [e2efs.E2EFSSoft]
 
 
-def scheduler(extra=0, factor=.01):
+def scheduler(extra=0, factor=.001):
     def sch(epoch):
         if epoch < 20 + extra:
             return .1 * factor
@@ -157,7 +157,7 @@ def main():
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
                     # optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
-                    optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, learning_rate=1e-3)
+                    optimizer = custom_optimizers.E2EFS_Adam(e2efs_layer=e2efs_layer, learning_rate=1e-4)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                     model.fs_layer = e2efs_layer
                     model.classifier = classifier

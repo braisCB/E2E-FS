@@ -2,10 +2,12 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K, optimizers, layers, models
 from tensorflow.keras.layers import Dense, Activation, BatchNormalization, Input, Convolution2D, GlobalAveragePooling2D, Flatten
 from tensorflow.keras.regularizers import l2
-from tensorflow.keras.applications import EfficientNetB0, DenseNet121
+from tensorflow.keras.applications import EfficientNetB0, DenseNet121, MobileNetV2
 from src.wrn.wide_residual_network import wrn_block
 from src.network_models import three_layer_nn as tln
 import numpy as np
+import tempfile
+import os
 
 
 def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_normal',
@@ -162,50 +164,7 @@ def efficientnetB0(
     keras_model = EfficientNetB0(
         include_top=False,
         input_shape=keras_shape,
-        weights=None
-    )
-
-    outputs = keras_model.output
-    inputs = keras_model.input
-    if input_shape[-1] == 1:
-        inputs = layers.Input(shape=input_shape)
-        x = layers.ZeroPadding2D(padding=(2,2))(inputs)
-        output_shape = K.int_shape(x)
-        output_shape = output_shape[:-1] + (3,)
-        x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
-        outputs = keras_model(x)
-
-    outputs = layers.Flatten()(outputs)
-    # outputs = layers.GlobalAveragePooling2D()(outputs)
-    # outputs = layers.Dropout(rate=.5)(outputs)
-    outputs = layers.Dense(nclasses,
-                           kernel_initializer='he_normal',
-                           # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
-                           activation='softmax')(outputs)
-
-    # instantiate and compile model
-    # orig paper uses SGD but RMSprop works better for DenseNet
-    model = models.Model(inputs=inputs, outputs=outputs)
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizers.Adam(1e-3),
-                  metrics=['acc'])
-
-    return model
-
-
-def densenet121(
-        input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
-        data_augmentation=True, regularization=0.
-):
-
-    keras_shape = input_shape
-    if input_shape[-1] == 1:
-        keras_shape = (32, 32, 3)
-
-    keras_model = DenseNet121(
-        include_top=False,
-        input_shape=keras_shape,
-        weights=None
+        weights='imagenet'
     )
 
     keras_model.trainable = True
@@ -217,6 +176,13 @@ def densenet121(
         for attr in ['kernel_regularizer']:
             if hasattr(layer, attr):
                 setattr(layer, attr, regularizer)
+
+    tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
+    keras_model.save_weights(tmp_weights_path)
+
+    keras_json = keras_model.to_json()
+    keras_model = models.model_from_json(keras_json)
+    keras_model.load_weights(tmp_weights_path, by_name=True)
 
     outputs = keras_model.output
     inputs = keras_model.input
@@ -240,45 +206,7 @@ def densenet121(
     # orig paper uses SGD but RMSprop works better for DenseNet
     model = models.Model(inputs=inputs, outputs=outputs)
     model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizers.Adam(1e-3),
-                  metrics=['acc'])
-
-    return model
-
-
-def efficientnetB0v2(
-        input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
-        data_augmentation=True, regularization=0.
-):
-    model_shape = (224, 224, 3)
-
-    keras_model = EfficientNetB0(
-        include_top=False,
-        input_shape=model_shape,
-        weights=None
-    )
-
-    inputs = layers.Input(shape=input_shape)
-    x = layers.experimental.preprocessing.Resizing(model_shape[0], model_shape[1], interpolation='bicubic')(inputs)
-
-    if input_shape[-1] == 1:
-        output_shape = K.int_shape(x)
-        output_shape = output_shape[:-1] + (3,)
-        x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
-
-    outputs = keras_model(x)
-    outputs = layers.GlobalAveragePooling2D()(outputs)
-    outputs = layers.Dropout(rate=.5)(outputs)
-    outputs = layers.Dense(nclasses,
-                           kernel_initializer='he_normal',
-                           # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
-                           activation='softmax')(outputs)
-
-    # instantiate and compile model
-    # orig paper uses SGD but RMSprop works better for DenseNet
-    model = models.Model(inputs=inputs, outputs=outputs)
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizers.Adam(1e-3),
+                  optimizer=optimizers.Adam(1e-4),
                   metrics=['acc'])
 
     return model

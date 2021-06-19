@@ -29,11 +29,11 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-network_names = ['densenet121', ]
+network_names = ['efficientnetB0', ]
 e2efs_classes = [e2efs.E2EFSRanking]
 
 
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=.001):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -49,20 +49,20 @@ def scheduler(extra=0, factor=.1):
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = cifar100.load_data()
     generator_fs = ImageDataGenerator(
-        width_shift_range=1./32.,
-        height_shift_range=1./32.,
+        # width_shift_range=5./32.,
+        # height_shift_range=5./32.,
         fill_mode='reflect',
         horizontal_flip=True,
-        vertical_flip=True,
-        rotation_range=40,
+        # vertical_flip=True,
+        #rotation_range=40,
     )
     generator = ImageDataGenerator(
-        width_shift_range=1./32.,
-        height_shift_range=1./32.,
+        # width_shift_range=5./32.,
+        # height_shift_range=5./32.,
         fill_mode='reflect',
         horizontal_flip=True,
-        vertical_flip=True,
-        rotation_range=40,
+        #vertical_flip=True,
+        #rotation_range=40,
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
@@ -167,7 +167,7 @@ def main():
 
                         # optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, lr=1e-1)  # optimizers.adam(lr=1e-2)
                         # optimizer = custom_optimizers.E2EFS_RMSprop(e2efs_layer=e2efs_layer, lr=1e-3)
-                        optimizer = custom_optimizers.E2EFS_Adam(e2efs_layer=e2efs_layer, learning_rate=1e-2)
+                        optimizer = custom_optimizers.E2EFS_SGD(e2efs_layer=e2efs_layer, learning_rate=1e-3)
                         model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
                         model.fs_layer = e2efs_layer
                         model.classifier = classifier
@@ -204,7 +204,7 @@ def main():
                     cont_seed += 1
                     model = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
                     # optimizer = optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                    optimizer = optimizers.RMSprop(learning_rate=1e-3)
+                    optimizer = optimizers.Adam(learning_rate=1e-3)
                     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                     model.fit_generator(
