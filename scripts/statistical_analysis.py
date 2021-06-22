@@ -40,8 +40,7 @@ def main(dataset, alpha=.05):
                     continue
                 BA = np.asarray(stats['classification'][key]).T
                 print('method : ', fs_class)
-                print('BA', key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
-
+                print('BA', key, ' : ', BA.mean(), '+-', BA.std())
 
     for t, BA_dict in enumerate([BA_10s, BA_AUCs]):
         print('BA 10 features' if t == 0 else 'BA_AUC')
@@ -95,7 +94,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'microarray/lung181'
+    dataset = 'fs_challenge/madelon'
     alpha = .05
 
     main(dataset, alpha)

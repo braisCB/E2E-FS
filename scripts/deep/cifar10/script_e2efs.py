@@ -27,7 +27,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['efficientnetB0', ]
+network_names = ['wrn164', ]
 e2efs_classes = [e2efs.E2EFSSoft]
 
 
@@ -153,6 +153,7 @@ def main():
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
                     classifier = load_model(model_filename) if warming_up else getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
+                    print('ACC : ', classifier.evaluate(test_data, test_labels))
                     e2efs_layer = e2efs_class(n_features, input_shape=train_data.shape[1:], kernel_initializer=initializers.constant(mask))
                     model = e2efs_layer.add_to_model(classifier, input_shape=train_data.shape[1:])
 
