@@ -5,6 +5,7 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.applications import EfficientNetB0, DenseNet121, MobileNetV2
 from src.wrn.wide_residual_network import wrn_block
 from src.network_models import three_layer_nn as tln
+from src.layers.elastic_deform import RandomElasticDeform
 import numpy as np
 import tempfile
 import os
@@ -164,25 +165,25 @@ def efficientnetB0(
     keras_model = EfficientNetB0(
         include_top=False,
         input_shape=keras_shape,
-        weights='imagenet'
+        weights=None
     )
 
     keras_model.trainable = True
 
     # adding regularization
-    regularizer = l2(regularization)
-
-    for layer in keras_model.layers:
-        for attr in ['kernel_regularizer']:
-            if hasattr(layer, attr):
-                setattr(layer, attr, regularizer)
-
-    tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
-    keras_model.save_weights(tmp_weights_path)
-
-    keras_json = keras_model.to_json()
-    keras_model = models.model_from_json(keras_json)
-    keras_model.load_weights(tmp_weights_path, by_name=True)
+    # regularizer = l2(regularization)
+    #
+    # for layer in keras_model.layers:
+    #     for attr in ['kernel_regularizer']:
+    #         if hasattr(layer, attr):
+    #             setattr(layer, attr, regularizer)
+    #
+    # tmp_weights_path = os.path.join(tempfile.gettempdir(), 'tmp_weights.h5')
+    # keras_model.save_weights(tmp_weights_path)
+    #
+    # keras_json = keras_model.to_json()
+    # keras_model = models.model_from_json(keras_json)
+    # keras_model.load_weights(tmp_weights_path, by_name=True)
 
     outputs = keras_model.output
     inputs = keras_model.input
@@ -194,12 +195,55 @@ def efficientnetB0(
         x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
         outputs = keras_model(x)
 
-    outputs = layers.Flatten()(outputs)
-    # outputs = layers.GlobalAveragePooling2D()(outputs)
-    # outputs = layers.Dropout(rate=.5)(outputs)
+    # outputs = layers.Flatten()(outputs)
+    outputs = layers.GlobalAveragePooling2D()(outputs)
+    # outputs = layers.Dropout(rate=.2)(outputs)
     outputs = layers.Dense(nclasses,
                            kernel_initializer='he_normal',
-                           kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
+                           kernel_regularizer=None,
+                           activation='softmax')(outputs)
+
+    # instantiate and compile model
+    # orig paper uses SGD but RMSprop works better for DenseNet
+    model = models.Model(inputs=inputs, outputs=outputs)
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=optimizers.SGD(1e-4),
+                  metrics=['acc'])
+
+    return model
+
+
+def efficientnetB0v2(
+        input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
+        data_augmentation=True, regularization=0.
+):
+    model_shape = (224, 224, 3)
+
+    keras_model = EfficientNetB0(
+        include_top=False,
+        input_shape=model_shape,
+        weights=None
+    )
+
+    keras_model.trainable = True
+
+    inputs = layers.Input(shape=input_shape)
+    x = layers.experimental.preprocessing.Resizing(model_shape[0], model_shape[1], interpolation='bicubic')(inputs)
+    #x = layers.experimental.preprocessing.RandomTranslation(height_factor=4./32., width_factor=4./32.)(x)
+    x = RandomElasticDeform(displacement=np.array([2,3,3]))(x)
+
+
+    if input_shape[-1] == 1:
+        output_shape = K.int_shape(x)
+        output_shape = output_shape[:-1] + (3,)
+        x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
+
+    outputs = keras_model(x)
+    outputs = layers.GlobalAveragePooling2D()(outputs)
+    outputs = layers.Dropout(rate=.5)(outputs)
+    outputs = layers.Dense(nclasses,
+                           kernel_initializer='he_normal',
+                           # kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
                            activation='softmax')(outputs)
 
     # instantiate and compile model
@@ -207,7 +251,7 @@ def efficientnetB0(
     model = models.Model(inputs=inputs, outputs=outputs)
     model.compile(loss='categorical_crossentropy',
                   optimizer=optimizers.Adam(1e-4),
-                  metrics=['acc'])
+                  metrics=['acc'], run_eagerly=True)
 
     return model
 
