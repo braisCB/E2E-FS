@@ -6,7 +6,7 @@ from src.wrn import network_models
 import json
 import numpy as np
 import os
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 from src.callbacks import E2EFSCallback
 from tensorflow.keras import backend as K
 import tensorflow as tf
@@ -27,7 +27,7 @@ verbose = 2
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-network_names = ['efficientnetB0', ]
+network_names = ['densenet', ]
 e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
 
 
@@ -172,7 +172,7 @@ def main():
                         ],
                         validation_data=(test_data, test_labels),
                         validation_steps=test_data.shape[0] // batch_size,
-                        verbose=1
+                        verbose=verbose
                     )
                     n_times.append(time.time() - start_time)
                     model.fit_generator(

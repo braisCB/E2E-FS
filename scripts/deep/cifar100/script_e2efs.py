@@ -23,7 +23,7 @@ else:
 batch_size = 128
 regularization = 5e-4
 reps = 5
-verbose = 2
+verbose = 1
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
@@ -121,12 +121,12 @@ def main():
             print('training_model')
             model.fit_generator(
                 generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=110,
+                steps_per_epoch=train_data.shape[0] // batch_size, epochs=50,
                 callbacks=[
                     callbacks.LearningRateScheduler(scheduler())
                 ],
                 validation_data=(test_data, test_labels),
-                validation_steps=test_data.shape[0] // batch_size,
+                # validation_steps=test_data.shape[0] // batch_size,
                 verbose=verbose
             )
 
