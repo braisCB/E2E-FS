@@ -13,7 +13,7 @@ import tensorflow as tf
 import time
 
 
-batch_size = 128
+batch_size = 64
 regularization = 5e-4
 reps = 5
 verbose = 2
@@ -200,7 +200,7 @@ def main():
         model_accuracies = []
         times = []
 
-        for factor in [.05, .1, .25]:
+        for factor in [.5]:
             n_features = int(total_features * factor)
             n_accuracies = []
             n_model_accuracies = []
