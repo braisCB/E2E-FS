@@ -13,10 +13,6 @@ from tensorflow.keras import backend as K
 from src import callbacks as clbks
 import time
 import tensorflow as tf
-from tensorflow.keras.backend.tensorflow_backend import set_session
-config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.2
-set_session(tf.Session(config=config))
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -331,7 +327,7 @@ def main(dataset_name):
             heatmaps = []
             for r in range(reps):
                 np.random.seed(cont_seed)
-                K.tf.set_random_seed(cont_seed)
+                tf.random.set_seed(cont_seed)
                 cont_seed += 1
 
                 model = train_Keras(
@@ -382,7 +378,7 @@ def main(dataset_name):
 
             for r in range(reps):
                 np.random.seed(cont_seed)
-                K.tf.set_random_seed(cont_seed)
+                tf.random.set_seed(cont_seed)
                 cont_seed += 1
 
                 model = train_SVC(svc_train_data_norm, train_labels, svc_kwargs)

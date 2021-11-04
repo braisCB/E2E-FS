@@ -6,8 +6,8 @@ class DFS(layers.Layer):
 
     def __init__(self,
                  kernel_initializer='ones',
-                 kernel_regularizer=None,
-                 kernel_constraint=regularizers.l1_l2(l1=1e-3, l2=1e-3),
+                 kernel_regularizer=regularizers.l1_l2(l1=1e-3, l2=1e-3),
+                 kernel_constraint=None,
                  **kwargs):
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
@@ -52,8 +52,6 @@ class DFS(layers.Layer):
         model.fs_kernel = K.abs(self.kernel)
         return model
 
-    def get_features(self, units):
-        return
 
     def compute_output_shape(self, input_shape):
         return input_shape

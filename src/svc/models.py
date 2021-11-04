@@ -2,6 +2,7 @@ from tensorflow.keras import backend as K, regularizers
 from sklearn.svm import LinearSVC as sklearn_LinearSVC
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.models import Model
+from src.layers.dfs import DFS
 from tensorflow.keras import optimizers
 import numpy as np
 
@@ -53,9 +54,11 @@ class LinearSVC(object):
         if self.use_keras:
             self.create_keras_model()
 
-    def create_keras_model(self, nclasses, warming_up=False):
+    def create_keras_model(self, nclasses, dfs=False, warming_up=False):
         input = Input(shape=self.nfeatures)
         x = input
+        if dfs:
+            x = DFS()(x)
         classifier = Dense(
             nclasses - 1, use_bias=True, kernel_initializer='he_normal',
             bias_initializer='zeros', input_shape=K.int_shape(x)[-1:],
