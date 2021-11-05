@@ -14,7 +14,7 @@ class iSFS:
         self.loss = loss
         self.gamma = gamma
 
-    def fit(self, X, y, **fit_kwargs):
+    def fit(self, X, y=None, **fit_kwargs):
         fit_kwargs = fit_kwargs or {}
 
         def create_model(input_shape, **kwargs):
@@ -36,7 +36,7 @@ class iSFS:
         new_X = X[:, self.ranking[:self.n_features_to_select]]
         return new_X
 
-    def fit_transform(self, X, y):
+    def fit_transform(self, X, y=None):
         self.fit(X, y)
         return self.transform(X)
 
