@@ -3,7 +3,7 @@ from tensorflow.keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
-from dataset_reader import lymphoma
+from dataset_reader import gisette
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
 from src.layers.dfs import DFS as DFS_layer
@@ -19,6 +19,8 @@ tf.compat.v1.disable_eager_execution()
 
 fs_methods = [
     DFS.DFS,
+    SFS.SFS,
+    SFS.iSFS
 ]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -32,9 +34,9 @@ k_folds = 3
 k_fold_reps = 20
 random_state = 42
 optimizer_class = keras_optimizers.Adam
-normalization_func = lymphoma.Normalize
+normalization_func = gisette.Normalize
 
-dataset_name = 'lymphoma'
+dataset_name = 'gisette'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 
 
@@ -54,7 +56,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = lymphoma.load_dataset()
+    dataset = gisette.load_dataset()
     return dataset
 
 
@@ -80,6 +82,7 @@ def get_fit_kwargs(train_y):
     sample_weight = np.zeros((num_samples,))
     sample_weight[train_y[:, 1] == 1] = class_weight[1]
     sample_weight[train_y[:, 1] == 0] = class_weight[0]
+    batch_size = max(2, len(train_y) // 50)
     return dict(
         batch_size=batch_size,
         epochs=epochs,
@@ -255,8 +258,8 @@ def main(dataset_name):
                     test_pred = model.predict(test_data_norm)
                     n_BAs.append(balance_accuracy(test_labels, test_pred))
                     n_mAPs.append(average_precision_score(test_labels[:, -1], test_pred))
-                    n_accuracies.append(model.evaluate(test_data_norm, test_labels, verbose=0)[-1])
-                    n_train_accuracies.append(model.evaluate(train_data_norm, train_labels, verbose=0)[-1])
+                    n_accuracies.append(float(model.evaluate(test_data_norm, test_labels, verbose=0)[-1]))
+                    n_train_accuracies.append(float(model.evaluate(train_data_norm, train_labels, verbose=0)[-1]))
                     del model
                     K.clear_session()
                     print(
