@@ -225,7 +225,7 @@ def main(dataset_name):
         AUC = np.sum(diff * diff_accuracies) / np.sum(diff)
         print('AUC : ', AUC)
 
-        output_filename = directory + 'LinearSVC_' + fs_method.__name__ + '.json'
+        output_filename = directory + 'three_layer_nn_' + fs_method.__name__ + '.json'
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
