@@ -1,18 +1,18 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras import backend as K, optimizers, layers
 from tensorflow.keras.regularizers import l1, l2
-from src.layers.mask import Mask
+from src.layers.dfs import DFS
 
 
 def fcnn(nfeatures, nclasses=2, layer_dims=None, bn=True, kernel_initializer='he_normal',
-                 dropout=0.0, lasso=0.0, regularization=0.0, momentum=0.9):
+                 dropout=0.0, dfs=False, regularization=0.0, momentum=0.9):
     channel_axis = 1 if K.image_data_format() == "channels_first" else -1
     input = layers.Input(shape=nfeatures, sparse=False)
     if layer_dims is None:
         layer_dims = [150, 100, 50]
     x = input
-    if lasso > 0:
-        x = Mask(kernel_regularizer=l1(lasso))(x)
+    if dfs:
+        x = DFS()(x)
 
     for layer_dim in layer_dims:
         x = layers.Dense(layer_dim, use_bias=not bn, kernel_initializer=kernel_initializer,
@@ -36,10 +36,10 @@ def fcnn(nfeatures, nclasses=2, layer_dims=None, bn=True, kernel_initializer='he
 
 
 def three_layer_nn(nfeatures, nclasses=2, bn=True, kernel_initializer='he_normal',
-                   dropout=0.0, lasso=0.0, regularization=5e-4, momentum=0.9):
+                   dropout=0.0, dfs=False, regularization=5e-4, momentum=0.9):
 
     return fcnn(nfeatures, nclasses, layer_dims=[50, 25, 10], bn=bn,
-                kernel_initializer=kernel_initializer, dropout=dropout, lasso=lasso,
+                kernel_initializer=kernel_initializer, dropout=dropout, dfs=dfs,
                 regularization=regularization, momentum=momentum)
 
 
