@@ -5,18 +5,21 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.applications import EfficientNetB0, DenseNet121, MobileNetV2, EfficientNetB1
 from src.wrn.wide_residual_network import wrn_block
 from src.network_models import three_layer_nn as tln
+from src.layers.dfs import DFS
 import numpy as np
 import tempfile
 import os
 
 
 def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_normal',
-                   dropout=0.0, lasso=0.0, regularization=5e-4, momentum=0.9):
+                   dropout=0.0, dfs=False, regularization=5e-4, momentum=0.9):
 
     nfeatures = np.prod(input_shape)
-    tln_model = tln((nfeatures, ), nclasses, bn, kernel_initializer, dropout, lasso, regularization, momentum)
+    tln_model = tln((nfeatures, ), nclasses, bn, kernel_initializer, dropout, False, regularization, momentum)
     ip = Input(shape=input_shape)
     x = ip
+    if dfs:
+        x = DFS()(x)
     if len(input_shape) > 1:
         x = Flatten()(x)
     output = tln_model(x)

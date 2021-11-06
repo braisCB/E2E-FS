@@ -14,9 +14,9 @@ class iSFS:
         self.loss = loss
         self.gamma = gamma
 
-    def fit(self, X, y=None, **fit_kwargs):
+    def fit(self, X, y=None, rank_kwargs=None, **fit_kwargs):
         fit_kwargs = fit_kwargs or {}
-
+        rank_kwargs = rank_kwargs or {}
         def create_model(input_shape, **kwargs):
             model = self.model_func(input_shape, **kwargs)
             model.saliency = saliency_function.get_saliency(self.loss, model)
@@ -29,7 +29,7 @@ class iSFS:
         self.ranking = SFS_class.get_rank('sfs', data=new_X, label=y, model_func=create_model, model_kwargs={},
                                           fit_kwargs=fit_kwargs,
                                           rank_kwargs={'gamma': self.gamma, 'epsilon': self.n_features_to_select},
-                                          saliency_kwargs={})
+                                          saliency_kwargs={}, **rank_kwargs)
         self.score = 1. / (self.ranking + 1)
 
     def transform(self, X):
