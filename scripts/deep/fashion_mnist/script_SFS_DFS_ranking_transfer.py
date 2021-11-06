@@ -8,9 +8,10 @@ import numpy as np
 import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras import backend as K
-import tensorflow as tf
 from src.baseline_methods import SFS, DFS
 import time
+import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
 if tf.__version__ < '2.0':
     from src import optimizers as custom_optimizers
 else:
@@ -27,8 +28,8 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'three_layer_nn'
-classifier_network = 'efficientnetB0'
-fs_classes = [SFS.SFS, DFS.DFS]
+classifier_network = 'densenet'
+fs_classes = [DFS.DFS, SFS.SFS, SFS.iSFS]
 
 
 def scheduler(extra=0, factor=.1):
@@ -169,12 +170,12 @@ def main():
                     tf.set_random_seed(cont_seed)
                     cont_seed += 1
 
-                    classifier = lambda x: load_model(fs_filename) if warming_up else getattr(network_models, fs_network)(
-                        input_shape=x, nclasses=num_classes, dfs='dfs' in fs_class.__name__.lower(), **model_kwargs)
+                    classifier = lambda x: getattr(network_models, fs_network)(
+                        input_shape=x, dfs='dfs' in fs_class.__name__.lower(), **model_kwargs)
 
                     fs_method = fs_class(model_func=classifier, n_features_to_select=int(total_features * .05))
                     fit_kwargs = get_fit_kwargs(train_labels)
-                    fs_method.fit(generator_fs.flow(train_data, train_labels, **generator_kwargs), **fit_kwargs)
+                    fs_method.fit(train_data, train_labels, {'generator_kwargs': generator_kwargs, 'generator': generator_fs}, **fit_kwargs)
 
                     heatmap += fs_method.score
                     del fs_method
@@ -205,8 +206,6 @@ def main():
                     callbacks=[
                         callbacks.LearningRateScheduler(scheduler()),
                     ],
-                    validation_data=(mask * test_data, test_labels),
-                    validation_steps=test_data.shape[0] // batch_size,
                     verbose=verbose
                 )
                 acc = model.evaluate(mask * test_data, test_labels, verbose=0)[-1]

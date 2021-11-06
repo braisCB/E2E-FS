@@ -14,8 +14,9 @@ class DFS:
         self.loss = loss
         self.gamma = gamma
 
-    def fit(self, X, y=None, **fit_kwargs):
+    def fit(self, X, y=None, rank_kwargs=None, **fit_kwargs):
         fit_kwargs = fit_kwargs or {}
+        rank_kwargs = rank_kwargs or {}
 
         new_X = X.copy()
         if self.normalize:
@@ -24,7 +25,7 @@ class DFS:
         self.ranking = SFS_class.get_rank('dfs', data=new_X, label=y, model_func=self.model_func, model_kwargs={},
                                           fit_kwargs=fit_kwargs,
                                           rank_kwargs={'epsilon': self.n_features_to_select, 'gamma': self.gamma},
-                                          saliency_kwargs={})
+                                          saliency_kwargs={}, **rank_kwargs)
         self.score = 1. / (self.ranking + 1)
 
     def transform(self, X):
