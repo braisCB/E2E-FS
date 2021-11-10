@@ -1,7 +1,7 @@
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import callbacks, initializers, optimizers
 from tensorflow.keras.models import load_model
-from tensorflow.keras.datasets import fashion_mnist
+from tensorflow.keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
@@ -46,7 +46,7 @@ def scheduler(extra=0, factor=.1):
 
 
 def load_dataset():
-    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train = np.expand_dims(x_train, axis=-1)
     x_test = np.expand_dims(x_test, axis=-1)
     generator_fs = ImageDataGenerator(
@@ -113,7 +113,7 @@ def main():
     }
 
     print('reps : ', reps)
-    name = 'fashion_mnist_' + classifier_network + '_r_' + str(regularization)
+    name = 'mnist_' + classifier_network + '_r_' + str(regularization)
     print(name)
     model_kwargs = {
         'nclasses': num_classes,
