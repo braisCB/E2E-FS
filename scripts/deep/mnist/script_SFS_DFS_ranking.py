@@ -28,7 +28,6 @@ warming_up = True
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'densenet'
-classifier_network = 'densenet'
 fs_classes = [DFS.DFS, SFS.SFS]
 
 
@@ -113,7 +112,7 @@ def main():
     }
 
     print('reps : ', reps)
-    name = 'mnist_' + classifier_network + '_r_' + str(regularization)
+    name = 'mnist_' + fs_network + '_r_' + str(regularization)
     print(name)
     model_kwargs = {
         'nclasses': num_classes,
@@ -122,33 +121,29 @@ def main():
 
     total_features = int(np.prod(train_data.shape[1:]))
 
-    model_filename = directory + classifier_network + '_trained_model.h5'
-    fs_filename = directory + fs_network + '_trained_model.h5'
+    filename = directory + fs_network + '_trained_model.h5'
 
-    for network_name in (fs_network, classifier_network):
-        filename = directory + network_name + '_trained_model.h5'
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+    if not os.path.exists(filename) and warming_up:
+        np.random.seed(1001)
+        tf.set_random_seed(1001)
+        model = getattr(network_models, fs_network)(input_shape=train_data.shape[1:], **model_kwargs)
+        print('training_model')
+        model.fit_generator(
+            generator.flow(train_data, train_labels, **generator_kwargs),
+            steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
+            callbacks=[
+                callbacks.LearningRateScheduler(scheduler())
+            ],
+            validation_data=(test_data, test_labels),
+            validation_steps=test_data.shape[0] // batch_size,
+            verbose=verbose
+        )
 
-        if not os.path.isdir(directory):
-            os.makedirs(directory)
-        if not os.path.exists(filename) and warming_up:
-            np.random.seed(1001)
-            tf.set_random_seed(1001)
-            model = getattr(network_models, network_name)(input_shape=train_data.shape[1:], **model_kwargs)
-            print('training_model')
-            model.fit_generator(
-                generator.flow(train_data, train_labels, **generator_kwargs),
-                steps_per_epoch=train_data.shape[0] // batch_size, epochs=80,
-                callbacks=[
-                    callbacks.LearningRateScheduler(scheduler())
-                ],
-                validation_data=(test_data, test_labels),
-                validation_steps=test_data.shape[0] // batch_size,
-                verbose=verbose
-            )
-
-            model.save(filename)
-            del model
-            K.clear_session()
+        model.save(filename)
+        del model
+        K.clear_session()
 
     for fs_class in fs_classes:
         nfeats = []
@@ -195,7 +190,7 @@ def main():
                 np.random.seed(cont_seed)
                 tf.set_random_seed(cont_seed)
                 cont_seed += 1
-                model = load_model(model_filename) if warming_up else getattr(network_models, classifier_network)(input_shape=train_data.shape[1:], **model_kwargs)
+                model = load_model(filename) if warming_up else getattr(network_models, fs_network)(input_shape=train_data.shape[1:], **model_kwargs)
                 # optimizer = optimizers.RMSprop(learning_rate=1e-2)  # optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
                 optimizer = optimizers.Adam(learning_rate=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
@@ -220,7 +215,7 @@ def main():
                     'n_features : ', n_features, ', acc : ', acc, ', time : ', times[-1]
                 )
 
-        output_filename = directory + fs_network + '_' + classifier_network + '_' + fs_class.__name__ + \
+        output_filename = directory + fs_network + fs_class.__name__ + \
                           '_results_warming_' + str(warming_up) + '.json'
 
         try:
