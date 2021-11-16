@@ -19,7 +19,7 @@ else:
 
 
 batch_size = 128
-regularization = 5e-6
+regularization = 5e-4
 fs_reps = 1
 reps = 5
 verbose = 2
@@ -53,13 +53,13 @@ def load_dataset():
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True,
+        # horizontal_flip=True,
     )
     generator = ImageDataGenerator(
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True
+        # horizontal_flip=True
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])
