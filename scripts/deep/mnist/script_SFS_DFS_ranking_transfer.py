@@ -27,9 +27,9 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-fs_network = 'three_layer_nn'
+fs_network = 'densenet'
 classifier_network = 'densenet'
-fs_classes = [DFS.DFS, SFS.SFS, SFS.iSFS]
+fs_classes = [DFS.DFS, SFS.SFS]
 
 
 def scheduler(extra=0, factor=.1):
@@ -53,13 +53,13 @@ def load_dataset():
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True,
+        # horizontal_flip=True,
     )
     generator = ImageDataGenerator(
         # width_shift_range=4./28.,
         # height_shift_range=4./28.,
         # fill_mode='reflect',
-        horizontal_flip=True
+        # horizontal_flip=True
     )
     y_train = np.reshape(y_train, [-1, 1])
     y_test = np.reshape(y_test, [-1, 1])

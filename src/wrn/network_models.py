@@ -33,13 +33,15 @@ def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_norm
 
 
 def wrn164(
-    input_shape, nclasses=2, bn=True, kernel_initializer='he_normal', dropout=0.0, regularization=0.0,
+    input_shape, nclasses=2, bn=True, kernel_initializer='he_normal', dropout=0.0, dfs=False, regularization=0.0,
     softmax=True
 ):
     channel_axis = 1 if K.image_data_format() == "channels_first" else -1
     ip = Input(shape=input_shape)
 
     x = ip
+    if dfs:
+        x = DFS()(x)
 
     x = Convolution2D(
         16, (3, 3), padding='same', kernel_initializer=kernel_initializer,
@@ -82,7 +84,7 @@ def wrn164(
 
 def densenet(
         input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
-        data_augmentation=True, regularization=None
+        data_augmentation=True, regularization=None, dfs=False
 ):
     num_bottleneck_layers = (depth - 4) // (2 * num_dense_blocks)
     num_filters_bef_dense_block = 2 * growth_rate
@@ -90,7 +92,10 @@ def densenet(
     # start model definition
     # densenet CNNs (composite function) are made of BN-ReLU-Conv2D
     inputs = layers.Input(shape=input_shape)
-    x = layers.BatchNormalization()(inputs)
+    x = inputs
+    if dfs:
+        x = DFS()(x)
+    x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
     x = layers.Conv2D(num_filters_bef_dense_block,
                       kernel_size=3, kernel_regularizer=l2(regularization) if regularization > 0.0 else None,
@@ -157,7 +162,7 @@ def densenet(
 
 def efficientnetB0(
         input_shape, nclasses=2, num_dense_blocks=3, growth_rate=12, depth=100, compression_factor=0.5,
-        data_augmentation=True, regularization=0.
+        data_augmentation=True, regularization=0., dfs=False
 ):
 
     keras_shape = input_shape
@@ -189,12 +194,16 @@ def efficientnetB0(
 
     outputs = keras_model.output
     inputs = keras_model.input
-    if input_shape[-1] == 1:
+    if input_shape[-1] == 1 or dfs:
         inputs = layers.Input(shape=input_shape)
-        x = layers.ZeroPadding2D(padding=(2, 2))(inputs)
-        output_shape = K.int_shape(x)
-        output_shape = output_shape[:-1] + (3,)
-        x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
+        x = inputs
+        if dfs:
+            x = DFS()(x)
+        if input_shape[-1] == 1:
+            x = layers.ZeroPadding2D(padding=(2, 2))(inputs)
+            output_shape = K.int_shape(x)
+            output_shape = output_shape[:-1] + (3,)
+            x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
         outputs = keras_model(x)
 
     outputs = layers.Flatten()(outputs)
