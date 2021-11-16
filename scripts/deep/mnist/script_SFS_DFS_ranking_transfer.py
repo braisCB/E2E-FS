@@ -27,8 +27,8 @@ warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
-fs_network = 'densenet'
-classifier_network = 'densenet'
+fs_network = 'efficientnetB0'
+classifier_network = 'efficientnetB0'
 fs_classes = [DFS.DFS, SFS.SFS]
 
 
