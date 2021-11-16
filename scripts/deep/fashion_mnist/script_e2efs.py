@@ -23,7 +23,7 @@ else:
 batch_size = 128
 regularization = 5e-4
 reps = 5
-verbose = 2
+verbose = 1
 warming_up = True
 
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
