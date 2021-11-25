@@ -94,7 +94,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'fs_challenge/madelon'
+    dataset = 'microarray/lymphoma'
     alpha = .05
 
     main(dataset, alpha)
