@@ -200,7 +200,7 @@ def efficientnetB0(
         if dfs:
             x = DFS()(x)
         if input_shape[-1] == 1:
-            x = layers.ZeroPadding2D(padding=(2, 2))(inputs)
+            x = layers.ZeroPadding2D(padding=(2, 2))(x)
             output_shape = K.int_shape(x)
             output_shape = output_shape[:-1] + (3,)
             x = layers.Lambda(lambda x: K.tile(x, (1, 1, 1, 3)), output_shape=output_shape)(x)
