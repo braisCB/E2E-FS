@@ -81,7 +81,7 @@ def load_dataset():
 
 def get_fit_kwargs(train_label):
     return dict(
-        steps_per_epoch=train_label.shape[0] // batch_size, epochs=1,
+        steps_per_epoch=train_label.shape[0] // batch_size, epochs=80,
         callbacks=[
             callbacks.LearningRateScheduler(scheduler()),
         ],
