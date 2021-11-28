@@ -31,7 +31,7 @@ fs_network = 'efficientnetB0'
 fs_classes = [DFS.DFS, SFS.SFS]
 
 
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=1.):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
@@ -192,7 +192,7 @@ def main():
                 cont_seed += 1
                 model = load_model(filename) if warming_up else getattr(network_models, fs_network)(input_shape=train_data.shape[1:], **model_kwargs)
                 # optimizer = optimizers.RMSprop(learning_rate=1e-2)  # optimizers.SGD(lr=1e-1)  # optimizers.adam(lr=1e-2)
-                optimizer = optimizers.Adam(learning_rate=1e-2)
+                optimizer = optimizers.SGD(learning_rate=1e-2)
                 model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
                 model.fit_generator(

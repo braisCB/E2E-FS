@@ -10,14 +10,14 @@ def main(dataset, alpha=.05):
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../')
 
     directory = os.path.dirname(os.path.realpath(__file__)) + '/' + dataset + '/info/'
-    files = glob.glob(directory + 'efficien*.json')
+    files = glob.glob(directory + 'three_layer_*wrn*.json')
 
     BA_AUCs = {}
     BA_10s = {}
 
     print(os.getcwd())
     for file in files:
-        fs_class = file.split('.')[-2].split('_')[1]
+        fs_class = file.split('.')[-2].split('_')[-4]
         with open(file, 'r') as outfile:
             stats = json.load(outfile)
         stats = stats[list(stats.keys())[0]][0]
@@ -29,7 +29,6 @@ def main(dataset, alpha=.05):
             BA = np.asarray(stats['classification'][key]).T
             print('method : ', fs_class)
             print(key, ' : ', BA.mean(axis=0), '+-', BA.std(axis=0))
-
 
 
     for t, BA_dict in enumerate([BA_10s, BA_AUCs]):
@@ -60,7 +59,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'deep/cifar100'
+    dataset = 'deep/fashion_mnist'
     alpha = .05
 
     main(dataset, alpha)
