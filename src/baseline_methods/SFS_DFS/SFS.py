@@ -219,7 +219,7 @@ def get_rank(fs_mode, data, label, model_func, valid_data=None, valid_label=None
         if valid_data is not None:
             result['n_features'].append(n_features)
             result['accuracy'].append(valid_acc)
-        n_features = int(rank_kwargs['gamma'] * n_features)
+        n_features = max(1, int(rank_kwargs['gamma'] * n_features))
         # del data_min, valid_data_min, saliency
     if not return_info:
         return rank
