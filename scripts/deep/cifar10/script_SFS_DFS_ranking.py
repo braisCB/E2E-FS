@@ -31,7 +31,7 @@ fs_network = 'densenet'
 fs_classes = [DFS.DFS, SFS.SFS]
 
 
-def scheduler(extra=0, factor=.1):
+def scheduler(extra=0, factor=1.):
     def sch(epoch):
         if epoch < 30 + extra:
             return .1 * factor
