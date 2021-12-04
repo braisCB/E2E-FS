@@ -3,26 +3,27 @@ from tensorflow.keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
-from dataset_reader import lung181
+from dataset_reader import leukemia
 from src.utils import balance_accuracy
 from src.svc.models import LinearSVC
 from extern.liblinear.python import liblinearutil
 from src.baseline_methods import Fisher, ILFS, InfFS, MIM, ReliefF, SVMRFE, LASSORFE
 from sklearn.model_selection import RepeatedStratifiedKFold
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import roc_auc_score
 from tensorflow.keras import backend as K
 import time
+import tensorflow as tf
 
 
-fs_methods = {
-    # Fisher.Fisher,
-    # ILFS.ILFS,
-    # InfFS.InfFS,
-    # MIM.MIM,
-    # ReliefF.ReliefF,
+fs_methods = [
+    Fisher.Fisher,
+    ILFS.ILFS,
+    InfFS.InfFS,
+    MIM.MIM,
+    ReliefF.ReliefF,
     SVMRFE.SVMRFE,
-    # LASSORFE.LASSORFE
-}
+    LASSORFE.LASSORFE
+]
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
@@ -35,9 +36,9 @@ k_folds = 3
 k_fold_reps = 20
 random_state = 42
 optimizer_class = keras_optimizers.Adam
-normalization_func = lung181.Normalize
+normalization_func = leukemia.Normalize
 
-dataset_name = 'lung181'
+dataset_name = 'leukemia'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 
 
@@ -57,7 +58,7 @@ def scheduler():
 
 
 def load_dataset():
-    dataset = lung181.load_dataset()
+    dataset = leukemia.load_dataset()
     return dataset
 
 
@@ -134,8 +135,8 @@ def main(dataset_name):
         BAs = []
         svc_BAs = []
         fs_time = []
-        mAPs = []
-        svc_mAPs = []
+        aucs = []
+        svc_aucs = []
         mus = []
         name = dataset_name + '_mu_' + str(mu)
         print(name, 'samples : ', raw_label.sum(), (1. - raw_label).sum())
@@ -197,8 +198,8 @@ def main(dataset_name):
                 n_svc_accuracies = []
                 n_BAs = []
                 n_svc_BAs = []
-                n_mAPs = []
-                n_svc_mAPs = []
+                n_aucs = []
+                n_svc_aucs = []
                 n_train_accuracies = []
                 print('n_features : ', n_features)
 
@@ -227,7 +228,7 @@ def main(dataset_name):
 
                 for r in range(reps):
                     np.random.seed(cont_seed)
-                    K.tf.set_random_seed(cont_seed)
+                    tf.random.set_seed(cont_seed)
                     cont_seed += 1
 
                     model = train_SVC(svc_train_data_norm, train_labels, svc_kwargs)
@@ -237,14 +238,14 @@ def main(dataset_name):
                     test_pred = np.asarray(test_pred)
                     n_svc_accuracies.append(accuracy[0])
                     n_svc_BAs.append(balance_accuracy(test_labels, test_pred))
-                    n_svc_mAPs.append(average_precision_score(test_labels[:, -1], test_pred))
+                    n_svc_aucs.append(roc_auc_score(test_labels[:, -1], test_pred))
                     del model
                     model = train_Keras(svc_train_data, train_labels, svc_test_data, test_labels, model_kwargs)
                     train_data_norm = model.normalization.transform(svc_train_data)
                     test_data_norm = model.normalization.transform(svc_test_data)
                     test_pred = model.predict(test_data_norm)
                     n_BAs.append(balance_accuracy(test_labels, test_pred))
-                    n_mAPs.append(average_precision_score(test_labels[:, -1], test_pred))
+                    n_aucs.append(roc_auc_score(test_labels[:, -1], test_pred))
                     n_accuracies.append(model.evaluate(test_data_norm, test_labels, verbose=0)[-1])
                     n_train_accuracies.append(model.evaluate(train_data_norm, train_labels, verbose=0)[-1])
                     del model
@@ -253,28 +254,28 @@ def main(dataset_name):
                         'n_features : ', n_features,
                         ', acc : ', n_accuracies[-1],
                         ', BA : ', n_BAs[-1],
-                        ', mAP : ', n_mAPs[-1],
+                        ', auc : ', n_aucs[-1],
                         ', train_acc : ', n_train_accuracies[-1],
                         ', svc_acc : ', n_svc_accuracies[-1],
                         ', svc_BA : ', n_svc_BAs[-1],
-                        ', svc_mAP : ', n_svc_mAPs[-1],
+                        ', svc_auc : ', n_svc_aucs[-1],
                     )
                 if i >= len(accuracies):
                     accuracies.append(n_accuracies)
                     svc_accuracies.append(n_svc_accuracies)
                     BAs.append(n_BAs)
-                    mAPs.append(n_mAPs)
+                    aucs.append(n_aucs)
                     svc_BAs.append(n_svc_BAs)
-                    svc_mAPs.append(n_svc_mAPs)
+                    svc_aucs.append(n_svc_aucs)
                     nfeats.append(n_features)
                     mus.append(model_kwargs['mu'])
                 else:
                     accuracies[i] += n_accuracies
                     svc_accuracies[i] += n_svc_accuracies
                     BAs[i] += n_BAs
-                    mAPs[i] += n_mAPs
+                    aucs[i] += n_aucs
                     svc_BAs[i] += n_svc_BAs
-                    svc_mAPs[i] += n_svc_mAPs
+                    svc_aucs[i] += n_svc_aucs
 
         mean_accuracies = np.array(accuracies).mean(axis=-1)
         print('NFEATS : ', nfeats)
@@ -300,12 +301,12 @@ def main(dataset_name):
                 'mean_svc_accuracy': np.array(svc_accuracies).mean(axis=1).tolist(),
                 'BA': BAs,
                 'mean_BA': np.array(BAs).mean(axis=1).tolist(),
-                'mAP': mAPs,
-                'mean_mAP': np.array(mAPs).mean(axis=1).tolist(),
+                'auc': aucs,
+                'mean_auc': np.array(aucs).mean(axis=1).tolist(),
                 'svc_BA': svc_BAs,
                 'svc_mean_BA': np.array(svc_BAs).mean(axis=1).tolist(),
-                'svc_mAP': svc_mAPs,
-                'svc_mean_mAP': np.array(svc_mAPs).mean(axis=1).tolist(),
+                'svc_auc': svc_aucs,
+                'svc_mean_auc': np.array(svc_aucs).mean(axis=1).tolist(),
                 'fs_time': fs_time
             }
         }
