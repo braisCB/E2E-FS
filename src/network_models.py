@@ -36,7 +36,7 @@ def fcnn(nfeatures, nclasses=2, layer_dims=None, bn=True, kernel_initializer='he
 
 
 def three_layer_nn(nfeatures, nclasses=2, bn=True, kernel_initializer='he_normal',
-                   dropout=0.0, dfs=False, regularization=5e-4, momentum=0.9):
+                   dropout=0.0, dfs=False, regularization=1e-3, momentum=0.9):
 
     return fcnn(nfeatures, nclasses, layer_dims=[50, 25, 10], bn=bn,
                 kernel_initializer=kernel_initializer, dropout=dropout, dfs=dfs,
