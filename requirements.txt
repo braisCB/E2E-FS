@@ -1,5 +1,5 @@
 tensorflow>=2.6.0
 pandas
 scikit-learn
-scikit_posthocs
+scikit-posthocs
 matplotlib
