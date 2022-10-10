@@ -32,8 +32,9 @@ class E2EFSBase:
             opt = custom_optimizers.E2EFS_RMSprop(self.e2efs_layer, th=self.th, **kwargs)
         else:
             raise Exception('Optimizer not supported. Contact the authors if you need it')
-        self.model.compile(opt, model.loss, model.metrics, model.loss_weights, model.sample_weight_mode,
-                           model.weighted_metrics)
+        compile_args = model._get_compile_args()
+        compile_args['optimizer'] = opt
+        self.model.compile(**compile_args)
         return self
 
     def fit(self, x,

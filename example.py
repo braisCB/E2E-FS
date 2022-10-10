@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     ## LOAD MODEL AND COMPILE IT (NEVER FORGET TO COMPILE!)
     model = wrn164(input_shape=x_train.shape[1:], nclasses=10, regularization=5e-4)
-    model.compile(optimizer='sgd', lr=1e-1, metrics=['acc'], loss='categorical_crossentropy')
+    model.compile(optimizer='sgd', metrics=['acc'], loss='categorical_crossentropy')
 
     ## LOAD E2EFS AND RUN IT
     fs_class = e2efs.E2EFSSoft(n_features_to_select=39).attach(model).fit(

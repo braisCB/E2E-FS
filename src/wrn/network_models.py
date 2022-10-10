@@ -25,7 +25,7 @@ def three_layer_nn(input_shape, nclasses=2, bn=True, kernel_initializer='he_norm
     output = tln_model(x)
     model = Model(ip, output)
 
-    optimizer = optimizers.SGD(lr=1e-1)
+    optimizer = optimizers.SGD(learning_rate=1e-1)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
     return model
@@ -76,7 +76,7 @@ def wrn164(
 
     model = Model(ip, output)
 
-    optimizer = optimizers.SGD(lr=1e-1)
+    optimizer = optimizers.SGD(learning_rate=1e-1)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['acc'])
 
     return model
