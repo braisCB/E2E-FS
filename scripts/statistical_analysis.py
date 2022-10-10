@@ -18,6 +18,8 @@ def main(dataset, alpha=.05):
     print(os.getcwd())
     for file in files:
         fs_class = file.split('.')[-2].split('_')[-1]
+        if 'iSFS' in fs_class:
+            continue
         with open(file, 'r') as outfile:
             stats = json.load(outfile)
         try:
@@ -35,7 +37,7 @@ def main(dataset, alpha=.05):
                 print('BA_10', key, ' : ', BA_10s[BA_key].mean(axis=0), '+-', BA_10s[BA_key].std(axis=0))
                 print('BA_AUC', key, ' : ', BA_AUC.mean(axis=0), '+-', BA_AUC.std(axis=0))
         except:
-            for key in ['BA', 'svc_BA', 'model_BA']:
+            for key in ['auc', 'svc_auc', 'model_auc']:
                 if key not in stats['classification']:
                     continue
                 BA = np.asarray(stats['classification'][key]).T
@@ -45,7 +47,13 @@ def main(dataset, alpha=.05):
     for t, BA_dict in enumerate([BA_10s, BA_AUCs]):
         print('BA 10 features' if t == 0 else 'BA_AUC')
 
-        keys = list(BA_dict.keys())
+        keys = []
+        auc = []
+        for key in sorted(BA_dict.keys()):
+            keys.append(key)
+            auc.append(BA_dict[key])
+
+        # keys = list(BA_dict.keys())
         # wilcoxon_matrix = np.zeros((len(keys), len(keys)))
         # for i in range(len(keys) - 1):
         #     BA_i = BA_dict[keys[i]]
@@ -68,7 +76,7 @@ def main(dataset, alpha=.05):
         # best_methods = np.where((min_wilkoxon + 1) * max_wilkoxon > 0)[0]
         # print('wilcoxon best methods : ', np.asarray(keys)[best_methods])
 
-        auc = tuple(list(BA_dict.values()))
+        # auc = tuple(list(BA_dict.values()))
         _, p_value = friedmanchisquare(*auc)
         print('friedman p_value : ', p_value)
         nemenyi = sp.posthoc_nemenyi_friedman(np.array(auc).T).values
@@ -94,7 +102,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'microarray/lymphoma'
+    dataset = 'microarray/lung181'
     alpha = .05
 
     main(dataset, alpha)

@@ -6,6 +6,7 @@ import os
 
 data_filename = 'lymphoma.mat'
 
+
 def load_dataset(directory=None):
     directory = (os.path.dirname(os.path.realpath(__file__)) + '/../datasets' if directory is None else directory) + '/lymphoma/'
     dataset = load_data(directory)

@@ -10,7 +10,7 @@ def main(dataset, alpha=.05):
     os.chdir(os.path.dirname(os.path.realpath(__file__)) + '/../')
 
     directory = os.path.dirname(os.path.realpath(__file__)) + '/' + dataset + '/info/'
-    files = glob.glob(directory + 'three_layer_*wrn*.json')
+    files = glob.glob(directory + 'dense*.json')
 
     BA_AUCs = {}
     BA_10s = {}
@@ -59,7 +59,7 @@ def main(dataset, alpha=.05):
 
 
 if __name__ == '__main__':
-    dataset = 'deep/fashion_mnist'
+    dataset = 'deep/cifar10'
     alpha = .05
 
     main(dataset, alpha)

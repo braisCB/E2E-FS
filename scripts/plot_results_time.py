@@ -2,7 +2,7 @@ import json
 import numpy as np
 import os
 import glob
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
 
 
 def main(dataset):
@@ -13,14 +13,19 @@ def main(dataset):
     image_directory = os.path.dirname(os.path.realpath(__file__)) + '/images/'
     files = glob.glob(directory + '*.json')
 
+    colors = cm.rainbow(np.linspace(0, 1, 15))
+
     BA_means = {}
 
     print(os.getcwd())
     for file in files:
+        if 'naive' in file or 'iSFS' in file:
+            continue
         fs_class = file.split('.')[-2].split('_')[-1]
         with open(file, 'r') as outfile:
             stats = json.load(outfile)
-        n_features = np.asarray(stats['classification']['n_features'])
+        if 'n_features' in stats['classification']:
+            n_features = np.asarray(stats['classification']['n_features'])
         for key in ['fs_time']:
             if key not in stats['classification']:
                 continue
@@ -50,7 +55,7 @@ def main(dataset):
     fig, ax = plt.subplots()
     rects = []
     for i, key in enumerate(keys):
-        rects.append(ax.bar(x - len(keys) * width / 2 + (i + .5)*width , BA_means[key], width, label=key))
+        rects.append(ax.bar(x - len(keys) * width / 2 + (i + .5)*width, BA_means[key], width, label=key, color=colors[i]))
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('time (s)', fontsize=18)
@@ -96,6 +101,6 @@ def main(dataset):
 
 
 if __name__ == '__main__':
-    dataset = 'fs_challenge/dexter'
+    dataset = 'microarray/lung181'
     main(dataset)
 
