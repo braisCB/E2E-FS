@@ -58,6 +58,7 @@ class E2EFSBase:
         self.model.fit(x, y, epochs=epochs, batch_size=batch_size, verbose=verbose, callbacks=callbacks, validation_split=validation_split,
                        validation_data=validation_data, shuffle=shuffle, class_weight=class_weight, sample_weight=sample_weight,
                        initial_epoch=initial_epoch, steps_per_epoch=steps_per_epoch, validation_steps=validation_steps, **kwargs)
+        return self
 
     def fine_tuning(self, x,
                     y,
