@@ -1,7 +1,12 @@
 # E2E-FS
 E2E-FS: An End-to-End Feature Selection Method for Neural Networks
 
-## Setup Instructions
+## Pip Installation (it does not include the scripts folder)
+Pypi url: https://pypi.org/project/e2efs/. To install, run the command
+
+    pip install e2efs
+
+## Setup Instructions to Install and Run All Tests (only from github repository)
 
 ### The python environment is included in the file requirements.txt.
 Run the command:
