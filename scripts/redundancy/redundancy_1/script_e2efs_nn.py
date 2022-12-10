@@ -1,14 +1,14 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks
+from keras.utils import to_categorical
+from keras import callbacks
 import json
 import numpy as np
 import os
 from dataset_reader import redundancy_1
-from src.layers import e2efs_tf2 as e2efs
+from e2efs import e2efs_layers_tf2 as e2efs_layers
 from src.network_models import three_layer_nn
 from sklearn.model_selection import RepeatedStratifiedKFold
-from tensorflow.keras import backend as K
-from src import callbacks as clbks, optimizers_tf2 as optimizers
+from keras import backend as K
+from e2efs import callbacks as clbks, optimizers_tf2 as optimizers
 import time
 import tensorflow as tf
 
@@ -27,7 +27,7 @@ regularization = 1e-3
 
 dataset_name = 'redundancy_1'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
+e2efs_classes = [e2efs_layers.E2EFS, e2efs_layers.E2EFSSoft]
 
 initial_lr = .01
 

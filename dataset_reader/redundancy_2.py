@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import erf
 import os
 import pickle
-from tensorflow.keras.utils import to_categorical
+from keras.utils import to_categorical
 
 
 data_filename = 'redundancy_2.pickle'

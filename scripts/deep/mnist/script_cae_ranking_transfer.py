@@ -1,14 +1,14 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, initializers, optimizers, layers, models
-from src import optimizers as custom_optimizers
-from tensorflow.keras.models import load_model
-from tensorflow.keras.datasets import mnist
+from keras.utils import to_categorical
+from keras import callbacks, initializers, optimizers, layers, models
+from e2efs import optimizers as custom_optimizers
+from keras.models import load_model
+from keras.datasets import mnist
 from src.wrn import network_models
 import json
 import numpy as np
 import os
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import backend as K
+from keras.preprocessing.image import ImageDataGenerator
+from keras import backend as K
 import tensorflow as tf
 import time
 if tf.__version__ >= '2.0':

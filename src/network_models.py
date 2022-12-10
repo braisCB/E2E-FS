@@ -1,6 +1,6 @@
-from tensorflow.keras.models import Model
-from tensorflow.keras import backend as K, optimizers, layers
-from tensorflow.keras.regularizers import l1, l2
+from keras.models import Model
+from keras import backend as K, optimizers, layers
+from keras.regularizers import l1, l2
 from src.layers.dfs import DFS
 
 

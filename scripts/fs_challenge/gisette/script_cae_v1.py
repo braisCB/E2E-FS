@@ -1,5 +1,5 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, initializers, layers, models, optimizers
+from keras.utils import to_categorical
+from keras import callbacks, initializers, layers, models, optimizers
 import json
 import numpy as np
 import os
@@ -9,8 +9,8 @@ from src.svc.models import LinearSVC
 from extern.liblinear.python import liblinearutil
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import roc_auc_score
-from tensorflow.keras import backend as K
-from src import callbacks as clbks
+from keras import backend as K
+from e2efs import callbacks as clbks
 import time
 import tensorflow as tf
 

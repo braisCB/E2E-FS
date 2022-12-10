@@ -1,13 +1,17 @@
-from src import callbacks as custom_callbacks
-from tensorflow.keras import backend as K
+from e2efs import callbacks as custom_callbacks
+from keras import backend as K
 import tensorflow as tf
 import numpy as np
-if tf.__version__ < '2.0':
-    from src import optimizers as custom_optimizers
-    from src.layers import e2efs
+from packaging import version
+if version.parse(tf.__version__) < version.parse('2.0'):
+    from e2efs import optimizers as custom_optimizers
+    from e2efs import e2efs_layers
 else:
-    from src import optimizers_tf2 as custom_optimizers
-    from src.layers import e2efs_tf2 as e2efs
+    if version.parse(tf.__version__) < version.parse('2.9'):
+        from e2efs import optimizers_tf2 as custom_optimizers
+    else:
+        from e2efs import optimizers_tf29 as custom_optimizers
+    from e2efs import e2efs_layers_tf2 as e2efs_layers_layers
 
 
 class E2EFSBase:
@@ -119,7 +123,7 @@ class E2EFSSoft(E2EFSBase):
         super(E2EFSSoft, self).__init__(th)
 
     def get_layer(self, input_shape):
-        return e2efs.E2EFSSoft(self.n_features_to_select, T=self.T, warmup_T=self.warmup_T, decay_factor=1. - self.rho,
+        return e2efs_layers.E2EFSSoft(self.n_features_to_select, T=self.T, warmup_T=self.warmup_T, decay_factor=1. - self.rho,
                                alpha_N=self.alpha_M, epsilon=self.epsilon, input_shape=input_shape)
     
 
@@ -141,5 +145,5 @@ class E2EFSRanking(E2EFSBase):
         super(E2EFSRanking, self).__init__(th)
 
     def get_layer(self, input_shape):
-        return e2efs.E2EFSRanking(self.n_features_to_select, speedup=self.tau, input_shape=input_shape)
+        return e2efs_layers.E2EFSRanking(self.n_features_to_select, speedup=self.tau, input_shape=input_shape)
 

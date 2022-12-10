@@ -1,5 +1,5 @@
 from src.baseline_methods.SFS_DFS import SFS as SFS_class
-from tensorflow.keras import backend as K
+from keras import backend as K
 
 
 class DFS:

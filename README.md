@@ -42,7 +42,7 @@ Example included in example.py
     model.compile(optimizer='sgd', lr=1e-1, metrics=['acc'], loss='categorical_crossentropy')
 
     ## LOAD E2EFS AND RUN IT
-    fs_class = e2efs.E2EFSSoft(n_features_to_select=39).attach(model).fit(
+    fs_class = models.E2EFSSoft(n_features_to_select=39).attach(model).fit(
         x_train, y_train, batch_size=128, validation_data=(x_test, y_test), verbose=2
     )
 

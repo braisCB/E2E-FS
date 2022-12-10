@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from scipy.special import erf
-from tensorflow.keras.utils import get_file
+from keras.utils import get_file
 
 datasets_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/'
 

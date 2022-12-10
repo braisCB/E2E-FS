@@ -1,5 +1,5 @@
-from tensorflow.keras import optimizers
-from tensorflow.keras import backend as K
+from keras import optimizers
+from keras import backend as K
 import tensorflow as tf
 from tensorflow.python.training import gen_training_ops
 from tensorflow.python.ops import array_ops, math_ops

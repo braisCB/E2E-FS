@@ -1,8 +1,8 @@
-from tensorflow.keras.layers import Add, Activation, Dropout
-from tensorflow.keras.layers import Convolution2D
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras import backend as K
-from tensorflow.keras.regularizers import l2
+from keras.layers import Add, Activation, Dropout
+from keras.layers import Convolution2D
+from keras.layers import BatchNormalization
+from keras import backend as K
+from keras.regularizers import l2
 import numpy as np
 
 

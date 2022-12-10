@@ -1,8 +1,9 @@
-from tensorflow.keras.datasets import mnist
-from tensorflow.keras.callbacks import LearningRateScheduler
-from tensorflow.keras.utils import to_categorical
-import e2efs
-from src.wrn.network_models import wrn164
+from keras.datasets import mnist
+from keras.callbacks import LearningRateScheduler
+from keras.utils import to_categorical
+from keras import optimizers
+from e2efs import models
+from src.wrn.network_models import wrn164, three_layer_nn
 import numpy as np
 
 
@@ -16,11 +17,11 @@ if __name__ == '__main__':
     y_test = to_categorical(y_test)
 
     ## LOAD MODEL AND COMPILE IT (NEVER FORGET TO COMPILE!)
-    model = wrn164(input_shape=x_train.shape[1:], nclasses=10, regularization=5e-4)
-    model.compile(optimizer='sgd', metrics=['acc'], loss='categorical_crossentropy')
+    model = three_layer_nn(input_shape=x_train.shape[1:], nclasses=10, regularization=5e-4)
+    model.compile(optimizer=optimizers.SGD(), metrics=['acc'], loss='categorical_crossentropy')
 
     ## LOAD E2EFS AND RUN IT
-    fs_class = e2efs.E2EFSSoft(n_features_to_select=39).attach(model).fit(
+    fs_class = models.E2EFSSoft(n_features_to_select=39).attach(model).fit(
         x_train, y_train, batch_size=128, validation_data=(x_test, y_test), verbose=2
     )
 

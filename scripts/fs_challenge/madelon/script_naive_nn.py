@@ -1,5 +1,5 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, initializers, layers, models, optimizers
+from keras.utils import to_categorical
+from keras import callbacks, initializers, layers, models, optimizers
 import json
 import numpy as np
 import os
@@ -8,7 +8,7 @@ from src.utils import balance_accuracy
 from src.network_models import three_layer_nn
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from tensorflow.keras import backend as K
+from keras import backend as K
 import time
 import tensorflow as tf
 if tf.__version__ >= '2.0':

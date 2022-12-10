@@ -1,5 +1,5 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, optimizers as keras_optimizers
+from keras.utils import to_categorical
+from keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
@@ -9,7 +9,7 @@ from src.network_models import three_layer_nn
 from src.baseline_methods import SFS, DFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from tensorflow.keras import backend as K
+from keras import backend as K
 import time
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()

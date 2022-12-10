@@ -1,16 +1,16 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, regularizers
+from keras.utils import to_categorical
+from keras import callbacks, regularizers
 import json
 import numpy as np
 import os
 from dataset_reader import madelon
-from src.layers import e2efs
+from e2efs import e2efs_layers
 from src.utils import balance_accuracy
 from src.network_models import three_layer_nn
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import average_precision_score
-from tensorflow.keras import backend as K
-from src import callbacks as clbks, optimizers
+from keras import backend as K
+from e2efs import callbacks as clbks, optimizers
 import time
 
 
@@ -28,7 +28,7 @@ regularization = 1e-3
 
 dataset_name = 'madelon'
 directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
-e2efs_classes = [e2efs.E2EFS, e2efs.E2EFSSoft]
+e2efs_classes = [e2efs_layers.E2EFS, e2efs_layers.E2EFSSoft]
 
 initial_lr = .01
 

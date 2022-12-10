@@ -1,5 +1,5 @@
 import numpy as np
-from tensorflow.keras.utils import to_categorical
+from keras.utils import to_categorical
 
 
 def balance_accuracy(y_true, y_pred):

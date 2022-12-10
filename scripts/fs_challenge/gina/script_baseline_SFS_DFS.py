@@ -1,5 +1,5 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, optimizers as keras_optimizers
+from keras.utils import to_categorical
+from keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os
@@ -10,7 +10,7 @@ from extern.liblinear.python import liblinearutil
 from src.baseline_methods import SFS, DFS
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.metrics import roc_auc_score
-from tensorflow.keras import backend as K
+from keras import backend as K
 import time
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()

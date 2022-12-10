@@ -1,13 +1,13 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, initializers, layers, models, optimizers
-from tensorflow.keras.models import load_model
-from tensorflow.keras.datasets import cifar10
+from keras.utils import to_categorical
+from keras import callbacks, initializers, layers, models, optimizers
+from keras.models import load_model
+from keras.datasets import cifar10
 from src.wrn import network_models
 import json
 import numpy as np
 import os
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import backend as K
+from keras.preprocessing.image import ImageDataGenerator
+from keras import backend as K
 import time
 
 

@@ -1,4 +1,4 @@
-from tensorflow.keras import backend as K, layers, models, initializers, regularizers
+from keras import backend as K, layers, models, initializers, regularizers
 import numpy as np
 
 

@@ -1,5 +1,5 @@
-from tensorflow.keras.callbacks import Callback
-from tensorflow.keras import backend as K
+from keras.callbacks import Callback
+from keras import backend as K
 
 
 class E2EFSCallback(Callback):

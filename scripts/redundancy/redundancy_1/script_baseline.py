@@ -1,5 +1,5 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, optimizers as keras_optimizers
+from keras.utils import to_categorical
+from keras import callbacks, optimizers as keras_optimizers
 import json
 import numpy as np
 import os

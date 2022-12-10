@@ -1,16 +1,16 @@
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras import callbacks, initializers, optimizers
-from src import optimizers as custom_optimizers
-from tensorflow.keras.models import load_model
-from tensorflow.keras.datasets import cifar100
+from keras.utils import to_categorical
+from keras import callbacks, initializers, optimizers
+from e2efs import optimizers as custom_optimizers
+from keras.models import load_model
+from keras.datasets import cifar100
 from src.wrn import network_models
 import json
 import numpy as np
 import os
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from src.callbacks import E2EFSCallback
-from src.layers import e2efs
-from tensorflow.keras import backend as K
+from keras.preprocessing.image import ImageDataGenerator
+from e2efs.callbacks import E2EFSCallback
+from e2efs import e2efs_layers
+from keras import backend as K
 import tensorflow as tf
 import time
 
@@ -26,7 +26,7 @@ directory = os.path.dirname(os.path.realpath(__file__)) + '/info/'
 temp_directory = os.path.dirname(os.path.realpath(__file__)) + '/temp/'
 fs_network = 'three_layer_nn'
 classifier_network = 'wrn164'
-e2efs_classes = [e2efs.E2EFSRanking]
+e2efs_classes = [e2efs_layers.E2EFSRanking]
 
 
 def scheduler(extra=0, factor=1.):
