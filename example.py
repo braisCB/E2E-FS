@@ -24,6 +24,16 @@ if __name__ == '__main__':
     fs_class = models.E2EFSSoft(n_features_to_select=39).attach(model).fit(
         x_train, y_train, batch_size=128, validation_data=(x_test, y_test), verbose=2
     )
+    
+    ## OPTIONAL: LOAD E2EFS AND RUN IT
+    # fs_class = models.E2EFS(n_features_to_select=39).attach(model).fit(
+    #     x_train, y_train, batch_size=128, validation_data=(x_test, y_test), verbose=2
+    # )
+
+    ## OPTIONAL: LOAD E2EFSRanking AND RUN IT (do not use fine tuning with this model, only get_ranking)
+    # fs_class = models.E2EFSRanking().attach(model).fit(
+    #     x_train, y_train, batch_size=128, validation_data=(x_test, y_test), verbose=2
+    # )
 
     ## FINE TUNING
     def scheduler(epoch):
