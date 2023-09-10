@@ -10,7 +10,7 @@ Pypi url: https://pypi.org/project/e2efs/. To install, run the command
 
 If you plan to use this code, please cite the following paper [1]
 
-[1] Cancela, Brais, Verónica Bolón-Canedo, and Amparo Alonso-Betanzos. "E2E-FS: An End-to-End Feature Selection Method for Neural Networks." IEEE Transactions on Pattern Analysis and Machine Intelligence (2022). DOI: 10.1109/TPAMI.2022.3228824.
+[1] B. Cancela, V. Bolon-Canedo and A. Alonso-Betanzos, "E2E-FS: An End-to-End Feature Selection Method for Neural Networks" in IEEE Transactions on Pattern Analysis & Machine Intelligence, vol. 45, no. 07, pp. 8311-8323, 2023.
 
 ## Setup Instructions to Install and Run All Tests (only from github repository)
 
