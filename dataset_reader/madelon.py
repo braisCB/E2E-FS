@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from scipy.special import erf
-from keras.utils import get_file
+from torchvision.datasets.utils import download_url
 
 datasets_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/'
 
@@ -24,7 +24,7 @@ def download_dataset(directory):
             else:
                 url = train_url + dataset_name.upper() + '/' + dataset_name.lower() + '_' + subset + '.' + option
             if not os.path.exists(directory + '/' + filename):
-                get_file(filename, url, cache_dir=directory, cache_subdir='.')
+                download_url(url=url, filename=filename, root=directory)
 
 
 def load_dataset(directory=None):

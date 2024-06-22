@@ -1,7 +1,2 @@
-tensorflow>=2.10.0
-keras>=2.10.0
-pandas
-scikit-learn
-scikit-posthocs
-matplotlib
-
+torch>=2.3.1
+lightning>=2.2.5

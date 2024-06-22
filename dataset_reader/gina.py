@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from keras.utils import get_file
+from torchvision.datasets.utils import download_url
 import zipfile
 import pandas as pd
 from scipy.special import erf
@@ -19,10 +19,10 @@ def download_dataset(directory=None):
         os.makedirs(directory)
 
     if not os.path.exists(directory + gina_agnostic_filename):
-        get_file(gina_agnostic_filename, gina_agnostic, cache_dir=directory, cache_subdir='.')
+        download_url(url=gina_agnostic, filename=gina_agnostic_filename, root=directory)
 
     if not os.path.exists(directory + gina_valid_labels_filename):
-        get_file(gina_valid_labels_filename, gina_valid_labels, cache_dir=directory, cache_subdir='.')
+        download_url(url=gina_valid_labels, filename=gina_valid_labels_filename, root=directory)
 
 
 def load_dataset(directory=None):
