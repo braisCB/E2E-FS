@@ -104,7 +104,7 @@ class E2EFSBase:
         if validation_data is not None:
             val_X, val_y = validation_data
             val_loader = self.__create_dataloader(val_X, val_y, shuffle=False, batch_size=batch_size)
-        trainer = pl.Trainer(barebones=True, accelerator='cpu', **trainer_opts)
+        trainer = pl.Trainer(barebones=True, **trainer_opts)
         # trainer = MyTrainer(enable_model_summary=verbose, enable_progress_bar=False, profiler='simple', **trainer_opts)
         trainer.fit(self.model, train_loader, val_loader)
         self.model.fitted = True
