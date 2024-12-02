@@ -5,7 +5,8 @@ from src.e2efs_models import E2EFSModel
 from torch.utils.data import TensorDataset, DataLoader
 import lightning as pl
 from copy import deepcopy
-from lightning.pytorch.callbacks.early_stopping import EarlyStopping
+from src.dataloaders import FastTensorDataLoader
+from src.callbacks import MyEarlyStopping
 
 
 class E2EFSBase:
@@ -83,10 +84,18 @@ class E2EFSBase:
         else:
             sample_weights = torch.ones(y_tensor.size(), device=device, dtype=dtype)
         if shuffle:
-            dataset = TensorDataset(torch.tensor(X, device=device, dtype=dtype), y_tensor, sample_weights)
+            # dataset = TensorDataset(torch.tensor(X, device=device, dtype=dtype), y_tensor, sample_weights)
+            dataloader = FastTensorDataLoader(
+                torch.tensor(X, device=device, dtype=dtype), y_tensor, sample_weights,
+                batch_size=batch_size, shuffle=shuffle, drop_last=shuffle,
+            )
         else:
-            dataset = TensorDataset(torch.tensor(X, device=device, dtype=dtype), y_tensor)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, drop_last=shuffle)
+            # dataset = TensorDataset(torch.tensor(X, device=device, dtype=dtype), y_tensor)
+            dataloader = FastTensorDataLoader(
+                torch.tensor(X, device=device, dtype=dtype), y_tensor,
+                batch_size=batch_size, shuffle=shuffle, drop_last=shuffle,
+            )
+        # dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, drop_last=shuffle, num_workers=0)
         return dataloader
 
     def __fit_model(self, X, y, validation_data=None, batch_size=32, trainer_opts=dict(), verbose=True):
@@ -95,7 +104,8 @@ class E2EFSBase:
         if validation_data is not None:
             val_X, val_y = validation_data
             val_loader = self.__create_dataloader(val_X, val_y, shuffle=False, batch_size=batch_size)
-        trainer = pl.Trainer(enable_model_summary=verbose, enable_progress_bar=verbose, **trainer_opts)
+        trainer = pl.Trainer(barebones=True, accelerator='cpu', **trainer_opts)
+        # trainer = MyTrainer(enable_model_summary=verbose, enable_progress_bar=False, profiler='simple', **trainer_opts)
         trainer.fit(self.model, train_loader, val_loader)
         self.model.fitted = True
         self.model.e2efs_layer.force_kernel()
@@ -106,7 +116,7 @@ class E2EFSBase:
         self.model = self.__build_model__(X, y)
         trainer_opts = {
             'callbacks': [
-                EarlyStopping(
+                MyEarlyStopping(
                     monitor="nfeats", mode="min", min_delta=0, stopping_threshold=self.n_features_to_select + 1,
                     patience=1000
                 )
