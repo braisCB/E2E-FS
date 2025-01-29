@@ -25,9 +25,12 @@ class E2EFSBase:
     def __build_mask__(self, input_shape):
         return getattr(layers, self.mask_name)(input_shape=input_shape, n_features_to_select=self.n_features_to_select)
 
-    def __build_model__(self, X, y):
+    def __build_model__(self, X, y, mask=None):
         input_shape = X.shape[1:]
-        mask = self.__build_mask__(input_shape=input_shape)
+        mask_shape = input_shape if mask is None else mask.shape
+        mask = self.__build_mask__(input_shape=mask_shape)
+        if mask is not None:
+            mask.kernel.data = mask
         if self.task == 'classification':
             output_size = len(np.unique(y))
         else:
@@ -111,9 +114,9 @@ class E2EFSBase:
         self.model.e2efs_layer.force_kernel()
         return self
 
-    def fit(self, X, y, validation_data=None, batch_size=32, max_epochs=500, verbose=True):
+    def fit(self, X, y, mask=None, validation_data=None, batch_size=32, max_epochs=500, verbose=True):
         self.task = self.__select_default_task(X, y)
-        self.model = self.__build_model__(X, y)
+        self.model = self.__build_model__(X, y, mask)
         trainer_opts = {
             'callbacks': [
                 MyEarlyStopping(
