@@ -28,9 +28,9 @@ class E2EFSBase:
     def __build_model__(self, X, y, mask=None):
         input_shape = X.shape[1:]
         mask_shape = input_shape if mask is None else mask.shape
-        mask = self.__build_mask__(input_shape=mask_shape)
+        e2efs_mask = self.__build_mask__(input_shape=mask_shape)
         if mask is not None:
-            mask.kernel.data = mask
+            e2efs_mask.kernel.data = mask
         if self.task == 'classification':
             output_size = len(np.unique(y))
         else:
@@ -39,7 +39,7 @@ class E2EFSBase:
             network_model = deepcopy(self.network)
         elif self.network == 'svr':
             network_model = default_models.DefaultSVR(input_shape=input_shape, kernel=X, output_size=output_size,
-                                                      kernel_type='rbf', regularization=0.1, mask=mask)
+                                                      kernel_type='rbf', regularization=0.1, mask=e2efs_mask)
         else:
             if self.network is None:
                 architecture = self.__select_default_architecture(X, y)
@@ -48,7 +48,7 @@ class E2EFSBase:
             reg = self.__select_default_regularization(architecture, X) if self.regularization == 'default' else self.regularization
             default_model = default_models.DefaultRegressor if self.task == 'regression' else default_models.DefaultClassifier
             network_model = default_model(input_shape=input_shape, output_size=output_size, architecture=architecture, regularization=reg)
-        return E2EFSModel(network=network_model, e2efs_layer=mask)
+        return E2EFSModel(network=network_model, e2efs_layer=e2efs_mask)
 
     def __select_default_architecture(self, X, y):
         nsamples, nfeats = len(X), np.prod(X.shape[1:])
